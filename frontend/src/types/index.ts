@@ -6,7 +6,7 @@ export interface AdminUser {
   name: string;
   email: string;
   role: string;
-  is_active: bool;
+  is_active: boolean;
   created_at: string;
 }
 

@@ -17,7 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!token;
 
-  const login = async (email: string, password: str) => {
+  const login = async (email: string, password: string) => {
     const data = await apiFetch<{ access_token: string; admin_name: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
