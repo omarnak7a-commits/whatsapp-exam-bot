@@ -1,0 +1,3 @@
+# Root requirements.txt for Vercel deployment.
+# Re-exports backend dependencies so Vercel's @vercel/python installs them.
+-r backend/requirements.txt
