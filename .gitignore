@@ -11,6 +11,10 @@ env/
 
 node_modules/
 dist/
+# The built SPA is committed because Vercel's FastAPI preset serves the whole
+# app from the Python function (frontend/dist must be inside the function bundle).
+!frontend/dist/
+!frontend/dist/**
 .vite/
 
 *.log

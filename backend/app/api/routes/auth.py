@@ -5,12 +5,16 @@ from app.schemas.auth import LoginRequest, TokenResponse, AdminOut
 from app.services.auth_service import AuthService
 from app.api.dependencies import get_current_admin
 from app.models.admin import Admin
+from app.seed import ensure_admin_in_session
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    # Auto-seed: guarantee the default admin exists before authenticating.
+    # Idempotent - a no-op when the admin is already present (e.g. serverless cold starts).
+    await ensure_admin_in_session(db)
     service = AuthService(db)
     return await service.login(data)
 

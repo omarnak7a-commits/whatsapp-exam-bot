@@ -12,7 +12,7 @@ class AuthService:
         self.repo = AdminRepository(db)
 
     async def login(self, data: LoginRequest) -> TokenResponse:
-        admin = await self.repo.get_by_email(data.email)
+        admin = await self.repo.get_by_email(str(data.email).strip().lower())
         if not admin or not verify_password(data.password, admin.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
