@@ -62,7 +62,11 @@ SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
         ("text", "VARCHAR(1000)", None),
     ],
     "exam_attempts": [
-        ("submitted_at", "DATETIME", None),
+        # NOTE: "TIMESTAMPTZ" (not "DATETIME") - PostgreSQL has no DATETIME type,
+        # and an invalid type aborts the whole ALTER (see SAVEPOINT isolation below).
+        # SQLite accepts any type name, so TIMESTAMPTZ is safe there too and
+        # matches the ORM's DateTime(timezone=True).
+        ("submitted_at", "TIMESTAMPTZ", None),
         ("total_score", "INTEGER", "0"),
         ("completion_time_seconds", "INTEGER", "0"),
         ("ranking", "INTEGER", None),
@@ -91,11 +95,17 @@ async def _existing_columns(conn, table: str) -> set[str]:
 
 
 async def _apply_schema_fixes(conn) -> None:
-    """Ensure every expected column exists (dialect-aware, idempotent).
+    """Ensure every expected column exists (dialect-aware, idempotent, isolated).
 
     PostgreSQL supports `ADD COLUMN IF NOT EXISTS` natively; SQLite's bundled
     version does not, so there we check existing columns first and only issue
     plain `ALTER TABLE ... ADD COLUMN` for the missing ones.
+
+    Every fix runs inside its own SAVEPOINT: PostgreSQL aborts the current
+    transaction as soon as a single statement fails, so without the savepoint
+    one bad ALTER (invalid type, permissions, ...) would roll back all the
+    fixes that already succeeded - which is exactly what kept the production
+    `exams` table missing its web-era columns.
     """
     dialect = conn.dialect.name
     for table, columns in SCHEMA_FIXES.items():
@@ -111,11 +121,16 @@ async def _apply_schema_fixes(conn) -> None:
                     f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS "
                     f"{column} {col_type}{default_clause}"
                 )
+            await conn.execute(text("SAVEPOINT schema_fix"))
             try:
                 await conn.execute(text(stmt))
+                await conn.execute(text("RELEASE SAVEPOINT schema_fix"))
                 logger.info("Schema fix applied: %s.%s", table, column)
             except Exception as e:  # noqa: BLE001
                 # Column already exists, DB flavour quirk, or permission issue.
+                # Undo ONLY this statement; the transaction stays usable.
+                await conn.execute(text("ROLLBACK TO SAVEPOINT schema_fix"))
+                await conn.execute(text("RELEASE SAVEPOINT schema_fix"))
                 logger.warning(
                     "Schema fix skipped for %s.%s: %s", table, column, e
                 )
