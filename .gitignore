@@ -25,3 +25,4 @@ dist/
 Dockerfile*
 docker-compose.override.yml
 *.db
+backend/file:testdb
