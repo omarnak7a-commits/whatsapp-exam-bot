@@ -5,7 +5,8 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.11"
       }
     },
     {
@@ -22,10 +23,13 @@
       "dest": "api/index.py"
     },
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "dest": "frontend/dist/index.html"
     }
   ],
   "installCommand": "cd frontend && npm install",
-  "buildCommand": "cd frontend && npx --no-install tsc && npx --no-install vite build"
+  "buildCommand": "cd frontend && npm run build"
 }

@@ -10,10 +10,11 @@ from app.db.base import Base as BaseModels  # ensure models are imported
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Initializing database tables for جبت كام؟ platform...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database initialization complete.")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        logger.warning(f"DB init skipped: {e}")
     yield
 
 
