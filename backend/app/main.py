@@ -135,20 +135,28 @@ async def _ensure_schema_on_conn(conn) -> None:
 # `ensure_schema_ready()` also runs once per process on the first HTTP
 # request (cold start), which covers serverless runtimes.
 # ---------------------------------------------------------------------------
-_schema_state = {"done": False, "attempted": False}
+_schema_state = {"done": False, "last_failed_at": 0.0}
 _schema_lock: asyncio.Lock | None = None
+_RETRY_COOLDOWN_SECONDS = 10.0
 
 
 async def ensure_schema_ready() -> None:
+    """Apply tables + missing columns once per process.
+
+    On failure the next attempt is throttled (10s) instead of being retried on
+    every request (DB down) or skipped forever (transient cold-start race).
+    """
     global _schema_lock
     if _schema_state["done"]:
         return
     if _schema_lock is None:
         _schema_lock = asyncio.Lock()
     async with _schema_lock:
-        if _schema_state["done"] or _schema_state["attempted"]:
+        if _schema_state["done"]:
             return
-        _schema_state["attempted"] = True
+        now = asyncio.get_event_loop().time()
+        if now - _schema_state["last_failed_at"] < _RETRY_COOLDOWN_SECONDS:
+            return
         try:
             async with engine.begin() as conn:
                 await _ensure_schema_on_conn(conn)
@@ -156,7 +164,8 @@ async def ensure_schema_ready() -> None:
             logger.info("Schema ensured (tables + missing columns)")
         except Exception as e:  # noqa: BLE001
             # Keep the app serving; the real error stays in the logs.
-            logger.error("Schema ensure failed: %r", e)
+            _schema_state["last_failed_at"] = now
+            logger.error("Schema ensure failed (will retry later): %r", e)
 
 
 async def _seed_admin() -> None:
