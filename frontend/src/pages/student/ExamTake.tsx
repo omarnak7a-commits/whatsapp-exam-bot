@@ -2,22 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useData, PublicAttemptBundle } from '@/contexts/DataContext'
 import { useNavigate, useParams } from '@/router'
 import Logo from '@/components/Logo'
-
-function Watermark() {
-  return (
-    <div
-      className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden"
-      aria-hidden="true"
-    >
-      <span
-        className="text-4xl font-black text-indigo-200 rotate-[-20deg] whitespace-nowrap"
-        style={{ opacity: 0.12, userSelect: 'none' }}
-      >
-        مس ايه فايز
-      </span>
-    </div>
-  )
-}
+import ExamWatermark from '@/components/ExamWatermark'
 
 interface LocalAnswer {
   questionId: string
@@ -210,10 +195,11 @@ export default function ExamTake() {
       <div className="flex-1 flex items-start justify-center px-4 py-6">
         <div className="w-full max-w-xl">
           {question && (
-            <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden relative">
-              <Watermark />
+            <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden relative [container-type:inline-size]">
+              {/* Decorative background watermark — non-interactive, behind content */}
+              <ExamWatermark />
 
-              <div className="relative p-6">
+              <div className="relative z-10 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${isTrueFalse ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-700'}`}>
                     {isTrueFalse ? 'صح أو غلط' : 'اختيار من متعدد'}
