@@ -159,13 +159,23 @@ export default function ExamTake() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between gap-4">
-        <Logo size="sm" />
-        <div className="flex-1 text-center">
+      <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2 sm:gap-4">
+        {/* Platform + teacher branding: جبت كام؟ (مس ايه فايز) */}
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 order-1">
+          <Logo size="sm" />
+          <span
+            dir="rtl"
+            className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-l from-indigo-50 to-teal-50 border border-indigo-100 text-indigo-700 font-black text-xs sm:text-sm whitespace-nowrap select-none"
+          >
+            (مس ايه فايز)
+          </span>
+        </div>
+        {/* Exam title + counter take a full second row on very narrow screens */}
+        <div className="flex-1 text-center min-w-0 basis-full sm:basis-auto order-3 sm:order-2">
           <p className="text-xs text-gray-500">{exam.title}</p>
           <p className="text-sm font-bold text-gray-700">السؤال {currentIdx + 1} من {questions.length}</p>
         </div>
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono font-black text-sm ${timerUrgent ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-indigo-50 text-indigo-600'}`} dir="ltr">
+        <div className={`order-2 sm:order-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono font-black text-sm ${timerUrgent ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-indigo-50 text-indigo-600'}`} dir="ltr">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           {mm}:{ss}
         </div>
@@ -198,7 +208,7 @@ export default function ExamTake() {
             <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden">
               <div className="p-6">
                 {/* Exam branding strip — above the question */}
-                <ExamWatermark className="mb-4" />
+                <ExamWatermark className="mb-5" />
 
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${isTrueFalse ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-700'}`}>
@@ -254,7 +264,7 @@ export default function ExamTake() {
                 )}
 
                 {/* Exam branding strip — below the answers / feedback */}
-                <ExamWatermark className="mt-6" />
+                <ExamWatermark className="mt-7" />
               </div>
             </div>
           )}
