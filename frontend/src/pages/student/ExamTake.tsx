@@ -195,11 +195,11 @@ export default function ExamTake() {
       <div className="flex-1 flex items-start justify-center px-4 py-6">
         <div className="w-full max-w-xl">
           {question && (
-            <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden relative [container-type:inline-size]">
-              {/* Decorative background watermark — non-interactive, behind content */}
-              <ExamWatermark />
+            <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden">
+              <div className="p-6">
+                {/* Exam branding strip — above the question */}
+                <ExamWatermark className="mb-4" />
 
-              <div className="relative z-10 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${isTrueFalse ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-700'}`}>
                     {isTrueFalse ? 'صح أو غلط' : 'اختيار من متعدد'}
@@ -231,10 +231,7 @@ export default function ExamTake() {
                     })}
                   </div>
                 ) : (
-                  <div className={`relative overflow-hidden rounded-2xl p-5 text-center ${feedback.isCorrect ? 'bg-green-50 border-2 border-green-300' : 'bg-red-50 border-2 border-red-300'} [container-type:inline-size]`}>
-                    {/* Keep the branding watermark visible during instant feedback too — behind content, non-interactive */}
-                    <ExamWatermark />
-                    <div className="relative z-10">
+                  <div className={`rounded-2xl p-5 text-center ${feedback.isCorrect ? 'bg-green-50 border-2 border-green-300' : 'bg-red-50 border-2 border-red-300'}`}>
                     <p className="text-3xl mb-2">{feedback.isCorrect ? '✅' : '❌'}</p>
                     <p className={`text-lg font-black mb-2 ${feedback.isCorrect ? 'text-green-700' : 'text-red-600'}`}>
                       {feedback.isCorrect ? 'إجابة صحيحة!' : 'إجابة خاطئة'}
@@ -253,9 +250,11 @@ export default function ExamTake() {
                     >
                       {currentIdx < questions.length - 1 ? 'السؤال التالي ←' : 'إنهاء الامتحان'}
                     </button>
-                    </div>
                   </div>
                 )}
+
+                {/* Exam branding strip — below the answers / feedback */}
+                <ExamWatermark className="mt-6" />
               </div>
             </div>
           )}
