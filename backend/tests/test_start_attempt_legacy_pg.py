@@ -100,7 +100,11 @@ async def test_bootstrap_heals_legacy_attempt_schema():
         conn.execute(LEGACY_DDL)
         conn.commit()
 
-    engine = create_async_engine(DSN)
+    # Disable client-side prepared statements when using psycopg: PGlite (and
+    # multiplexed sockets) share one physical connection, so psycopg's prepared
+    # statement names collide across test runs. Any PostgreSQL passes either way.
+    connect_args = {"prepare_threshold": None} if "+psycopg" in DSN else {}
+    engine = create_async_engine(DSN, connect_args=connect_args)
     try:
         # --- 2. Run the exact serverless cold-start bootstrap ---
         async with engine.begin() as conn:
