@@ -1,2 +1,0 @@
-const BASE=import.meta.env.VITE_API_URL||'http://localhost:8000';
-export async function api(path:string,opts:RequestInit={}){const token=localStorage.getItem('token'); const headers=new Headers(opts.headers); if(opts.body) headers.set('Content-Type','application/json'); if(token) headers.set('Authorization',`Bearer ${token}`); const r=await fetch(BASE+path,{...opts,headers}); if(!r.ok){const e=await r.json().catch(()=>({})); throw new Error(e.detail||'حدث خطأ');} return r.json();}

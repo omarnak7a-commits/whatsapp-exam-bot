@@ -1,13 +1,24 @@
 import asyncio
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+import os
+import secrets
+import string
+from datetime import datetime, timezone
+from sqlalchemy import select
 from app.db.session import AsyncSessionLocal, engine, Base
-from app.core.security import get_password_hash
 from app.models.admin import Admin
 from app.models.exam import Exam, ExamStatus
 from app.models.question import Question
 from app.models.option import Option
-from app.repositories.admin_repository import AdminRepository
+from app.core.security import get_password_hash
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
+
+
+def _random_suffix(length: int = 4) -> str:
+    alphabet = string.ascii_lowercase + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
 async def seed_data():
@@ -16,45 +27,51 @@ async def seed_data():
         await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
-        # 1. Seed Admin
-        admin_repo = AdminRepository(session)
-        existing_admin = await admin_repo.get_by_email("admin@exam.com")
+        # 1. Seed Admin from env or default
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@exam.com")
+        admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+        admin_name = os.getenv("ADMIN_NAME", "مدير النظام")
+
+        result = await session.execute(select(Admin).where(Admin.email == admin_email))
+        existing_admin = result.scalars().first()
+
         if not existing_admin:
-            print("Seeding default admin user: admin@exam.com / admin123")
+            print(f"Seeding default admin user: {admin_email}")
             admin = Admin(
-                name="مدير النظام",
-                email="admin@exam.com",
-                password_hash=get_password_hash("admin123"),
+                name=admin_name,
+                email=admin_email,
+                password_hash=get_password_hash(admin_password),
                 role="ADMIN",
                 is_active=True,
             )
             session.add(admin)
             await session.commit()
         else:
-            print("Admin already exists.")
+            print(f"Admin already exists: {admin_email}")
 
-        # 2. Seed Sample Published Exam
+        # 2. Seed Sample Published Exam for جبت كام؟
         result = await session.execute(
-            Exam.__table__.select().where(Exam.__table__.c.title == "امتحان الرياضيات والذكاء العام")
+            select(Exam).where(Exam.title == "امتحان الرياضيات والذكاء العام")
         )
-        if not result.first():
-            print("Seeding sample math & general intelligence exam...")
+        existing_exam = result.scalars().first()
+
+        if not existing_exam:
+            print("Seeding sample exam: امتحان الرياضيات والذكاء العام")
             exam = Exam(
                 title="امتحان الرياضيات والذكاء العام",
-                description="امتحان تجريبي اختباري من 10 أسئلة لقياس القدرات الحسابية والذهنية.",
-                duration_seconds=1200,  # 20 minutes
+                description="امتحان تجريبي من 10 أسئلة لقياس القدرات الحسابية والذهنية. جاهز تعرف جبت كام؟ 👀",
+                public_slug=f"math-general-{_random_suffix(4)}",
+                duration_minutes=15,
+                duration_seconds=900,
                 status=ExamStatus.PUBLISHED.value,
                 number_of_questions=10,
-                randomize_questions=True,
-                randomize_options=True,
-                one_attempt_only=True,
-                show_correct_answer_immediately=True,
-                published_at=datetime.utcnow(),
+                randomize_questions=False,
+                randomize_options=False,
+                published_at=_utcnow(),
             )
             session.add(exam)
             await session.flush()
 
-            # 10 Questions with 4 options each
             sample_questions = [
                 {
                     "text": "ما هي عاصمة جمهورية مصر العربية؟",
@@ -148,18 +165,21 @@ async def seed_data():
                 },
             ]
 
-            for q_idx, q_data in enumerate(sample_questions, start=1):
+            for q_idx, q_data in enumerate(sample_questions, start=0):
                 q = Question(
                     exam_id=exam.id,
+                    text=q_data["text"],
                     question_text=q_data["text"],
                     order_index=q_idx,
+                    points=1,
                 )
                 session.add(q)
                 await session.flush()
 
-                for o_idx, (opt_text, is_corr) in enumerate(q_data["options"], start=1):
+                for o_idx, (opt_text, is_corr) in enumerate(q_data["options"]):
                     opt = Option(
                         question_id=q.id,
+                        text=opt_text,
                         option_text=opt_text,
                         is_correct=is_corr,
                         order_index=o_idx,
@@ -167,7 +187,9 @@ async def seed_data():
                     session.add(opt)
 
             await session.commit()
-            print("Sample exam and 10 questions seeded successfully!")
+            print(f"Sample exam seeded with slug: {exam.public_slug}")
+        else:
+            print("Sample exam already exists.")
 
 
 if __name__ == "__main__":
