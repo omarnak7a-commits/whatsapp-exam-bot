@@ -4,7 +4,14 @@ import { apiFetch } from '../api/client';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
-import { ArrowRight, Sparkles, Clock, FileText } from 'lucide-react';
+import { ArrowRight, Sparkles, Clock, FileText, CheckCircle2, Copy, Link2, ArrowLeft } from 'lucide-react';
+import { examLink, copyExamLink } from '../utils/examLink';
+
+interface CreatedExam {
+  id: number;
+  title: string;
+  public_slug?: string;
+}
 
 export const CreateExamPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,6 +20,7 @@ export const CreateExamPage: React.FC = () => {
   const [duration, setDuration] = useState(20);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<CreatedExam | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +33,7 @@ export const CreateExamPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const exam = await apiFetch<any>('/exams', {
+      const exam = await apiFetch<CreatedExam>('/exams', {
         method: 'POST',
         body: JSON.stringify({
           title: title.trim(),
@@ -33,13 +41,90 @@ export const CreateExamPage: React.FC = () => {
           duration_minutes: duration,
         }),
       });
-      navigate(`/admin/exams/${exam.id}`);
+      // Show the real link right away instead of jumping silently to the editor
+      setCreated(exam);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const shareUrl = examLink(created?.public_slug);
+
+  // Success step: the exam is created — show the real link + next actions
+  if (created) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+        <div className="flex items-center gap-4">
+          <Link to="/admin/exams" className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 transition-colors">
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white">إنشاء امتحان جديد</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">خطوة أخيرة قبل ما تبدأ تضيف الأسئلة</p>
+          </div>
+        </div>
+
+        <Card className="border-2 border-emerald-200 dark:border-emerald-800/50">
+          <div className="text-center py-2">
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-9 h-9 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">تم إنشاء الامتحان بنجاح ✅</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              ده امتحان «{created.title}» — رابط الامتحان الحقيقي جاهز
+            </p>
+          </div>
+
+          {shareUrl ? (
+            <div className="mt-6">
+              <label className="block text-sm font-black text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-brand-600" />
+                رابط الامتحان (شاركه مع الطلاب)
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  readOnly
+                  dir="ltr"
+                  value={shareUrl}
+                  onFocus={(e) => e.target.select()}
+                  className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3.5 font-mono text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 select-all"
+                />
+                <Button type="button" onClick={() => copyExamLink(created.public_slug)}>
+                  <Copy className="w-4 h-4 ml-2" />
+                  نسخ الرابط
+                </Button>
+              </div>
+              <div className="mt-4 flex items-start gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-2xl p-4">
+                <span className="text-lg leading-none">📌</span>
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 leading-relaxed">
+                  الرابط ده هيشتغل للطلاب أول ما تضيف الأسئلة وتنشر الامتحان. لحد كده الامتحان لسه «مسودة».
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-6 text-sm font-bold text-slate-500 dark:text-slate-400 text-center">
+              الامتحان اتعمل ك«مسودة» — هيظهر الرابط هنا أول ما يتنشر
+            </p>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-6">
+            <Button type="button" fullWidth className="flex-[2]" onClick={() => navigate(`/admin/exams/${created.id}`)}>
+              متابعة: إضافة الأسئلة
+              <ArrowLeft className="w-4 h-4 mr-2" />
+            </Button>
+            <Link to="/admin/exams" className="flex-1">
+              <Button type="button" variant="secondary" fullWidth>
+                العودة للامتحانات
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
