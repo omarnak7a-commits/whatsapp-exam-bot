@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.api.routes import auth, exams, questions, students, results, public
@@ -36,11 +37,87 @@ else:
     )
 
 
+# Columns that were added by the ORM models but may be missing on databases that
+# were created before the web-platform schema evolved (e.g. the live Vercel DB).
+# Each fix is idempotent and isolated so a single failure never blocks startup.
+SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
+    "exams": [
+        ("public_slug", "VARCHAR(100)", None),
+        ("duration_minutes", "INTEGER", "20"),
+    ],
+    "questions": [
+        ("text", "TEXT", None),
+        ("points", "INTEGER", "1"),
+    ],
+    "options": [
+        ("text", "VARCHAR(1000)", None),
+    ],
+    "exam_attempts": [
+        ("submitted_at", "DATETIME", None),
+        ("total_score", "INTEGER", "0"),
+        ("completion_time_seconds", "INTEGER", "0"),
+        ("ranking", "INTEGER", None),
+    ],
+    "attempt_answers": [
+        ("option_id", "INTEGER", None),
+        ("points_awarded", "INTEGER", "0"),
+    ],
+}
+
+
+async def _existing_columns(conn, table: str) -> set[str]:
+    """Return the set of existing column names for a table."""
+    if conn.dialect.name == "sqlite":
+        res = await conn.execute(text(f"PRAGMA table_info({table})"))
+        return {str(row[1]) for row in res.fetchall()}
+    # PostgreSQL / generic: query information_schema.
+    res = await conn.execute(
+        text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = :t"
+        ),
+        {"t": table},
+    )
+    return {str(row[0]) for row in res.fetchall()}
+
+
+async def _apply_schema_fixes(conn) -> None:
+    """Ensure every expected column exists (dialect-aware, idempotent).
+
+    PostgreSQL supports `ADD COLUMN IF NOT EXISTS` natively; SQLite's bundled
+    version does not, so there we check existing columns first and only issue
+    plain `ALTER TABLE ... ADD COLUMN` for the missing ones.
+    """
+    dialect = conn.dialect.name
+    for table, columns in SCHEMA_FIXES.items():
+        existing = await _existing_columns(conn, table)
+        for column, col_type, default in columns:
+            if column in existing:
+                continue
+            default_clause = f" DEFAULT {default}" if default is not None else ""
+            if dialect == "sqlite":
+                stmt = f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{default_clause}"
+            else:
+                stmt = (
+                    f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS "
+                    f"{column} {col_type}{default_clause}"
+                )
+            try:
+                await conn.execute(text(stmt))
+            except Exception as e:  # noqa: BLE001
+                # Column already exists, DB flavour quirk, or permission issue.
+                logger.warning(
+                    "Schema fix skipped for %s.%s: %s", table, column, e
+                )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Patch up any columns missing from older databases.
+            await _apply_schema_fixes(conn)
         # Auto-seed default admin (idempotent, ADMIN_* env driven).
         # Makes the first login work out-of-the-box on fresh databases (e.g. Vercel).
         admin = await ensure_admin_seeded()

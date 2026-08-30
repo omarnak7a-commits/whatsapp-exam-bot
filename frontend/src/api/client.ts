@@ -23,8 +23,8 @@ export async function apiFetch<T>(
   if (response.status === 401) {
     const isLoginRequest = endpoint === LOGIN_ENDPOINT;
 
-    // Try to read the server's error detail first so real errors
-    // (e.g. wrong credentials on the login page) are shown as-is.
+    // Read the server's real error detail so we show the actual message
+    // (e.g. "wrong credentials" or "account disabled") instead of a generic one.
     let serverDetail: string | null = null;
     try {
       const errData = await response.json();
@@ -32,11 +32,19 @@ export async function apiFetch<T>(
         serverDetail = errData.detail;
       }
     } catch {
-      // Non-JSON body (proxy/network error page) — keep the default messages.
+      // Non-JSON body (proxy/network error page) — fall back to defaults below.
+    }
+
+    // Login endpoint: a 401 here means bad credentials (or a disabled account),
+    // never an expired session. Show the real error message as-is.
+    if (isLoginRequest) {
+      throw new Error(
+        serverDetail || 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+      );
     }
 
     // True session expiry: an authenticated request returned 401.
-    if (!isLoginRequest && token) {
+    if (token) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('admin_name');
       localStorage.removeItem('admin_email');
@@ -46,13 +54,8 @@ export async function apiFetch<T>(
       throw new Error(serverDetail || 'جلسة العمل انتهت، يرجى إعادة التسجيل');
     }
 
-    // Login failures must never be shown as "session expired".
-    throw new Error(
-      serverDetail ||
-      (isLoginRequest
-        ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
-        : 'حدث خطأ في النظام')
-    );
+    // Unauthenticated request that still got a 401 — surface the server's error.
+    throw new Error(serverDetail || 'حدث خطأ في النظام');
   }
 
   if (!response.ok) {

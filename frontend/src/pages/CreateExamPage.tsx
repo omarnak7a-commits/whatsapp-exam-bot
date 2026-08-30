@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import { Card } from '../components/ui/Card';
@@ -22,14 +22,35 @@ export const CreateExamPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedExam | null>(null);
 
+  // After the exam is created, show the success card briefly (with the real
+  // link) and then auto-navigate to the questions editor.
+  useEffect(() => {
+    if (!created) return;
+    const t = setTimeout(() => {
+      navigate(`/admin/exams/${created.id}`);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [created, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    // Clear, explicit validation before hitting the API.
     if (!title.trim()) {
-      setError('عنوان الامتحان مطلوب');
+      setError('عنوان الامتحان مطلوب — اكتب عنوان عشان تقدر تكمّل.');
       return;
     }
+    if (!Number.isFinite(duration) || duration < 1 || duration > 180) {
+      setError('مدة الامتحان لازم تكون بين 1 و 180 دقيقة.');
+      return;
+    }
+
+    console.log('[CreateExamPage] Submitting new exam:', {
+      title: title.trim(),
+      description: description.trim() || null,
+      duration_minutes: duration,
+    });
 
     setLoading(true);
     try {
@@ -41,10 +62,12 @@ export const CreateExamPage: React.FC = () => {
           duration_minutes: duration,
         }),
       });
+      console.log('[CreateExamPage] Exam created:', exam);
       // Show the real link right away instead of jumping silently to the editor
       setCreated(exam);
     } catch (err: any) {
-      setError(err.message);
+      console.error('[CreateExamPage] Create failed:', err);
+      setError(err?.message || 'حصل خطأ غير متوقع أثناء إنشاء الامتحان');
     } finally {
       setLoading(false);
     }
@@ -109,6 +132,12 @@ export const CreateExamPage: React.FC = () => {
               الامتحان اتعمل ك«مسودة» — هيظهر الرابط هنا أول ما يتنشر
             </p>
           )}
+
+          <div className="mt-5 text-center">
+            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              هيتم تحويلك لصفحة إضافة الأسئلة تلقائياً خلال لحظات... ⏳
+            </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-6">
             <Button type="button" fullWidth className="flex-[2]" onClick={() => navigate(`/admin/exams/${created.id}`)}>
