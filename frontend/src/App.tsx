@@ -1,90 +1,114 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Layout } from './components/layout/Layout';
-import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { ExamsPage } from './pages/ExamsPage';
-import { ExamEditorPage } from './pages/ExamEditorPage';
-import { CreateExamPage } from './pages/CreateExamPage';
-import { ResultsPage, ResultDetailPage } from './pages/ResultsPage';
-import { StudentsPage } from './pages/StudentsPage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { ExamLandingPage } from './pages/public/ExamLandingPage';
-import { ExamTakePage } from './pages/public/ExamTakePage';
-import { ResultPage } from './pages/public/ResultPage';
-import { PublicLeaderboardPage } from './pages/public/PublicLeaderboardPage';
+import React, { useEffect } from 'react'
+import { RouterProvider, useRouter } from './router'
+import { AuthProvider } from './contexts/AuthContext'
+import { DataProvider } from './contexts/DataContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import LoginPage from './pages/LoginPage'
+import AdminLayout from './pages/admin/AdminLayout'
+import Dashboard from './pages/admin/Dashboard'
+import Exams from './pages/admin/Exams'
+import CreateExam from './pages/admin/CreateExam'
+import EditExam from './pages/admin/EditExam'
+import QuestionBuilder from './pages/admin/QuestionBuilder'
+import Results from './pages/admin/Results'
+import ResultDetail from './pages/admin/ResultDetail'
+import Participants from './pages/admin/Participants'
+import AdminLeaderboard from './pages/admin/AdminLeaderboard'
+import Settings from './pages/admin/Settings'
+import ExamStart from './pages/student/ExamStart'
+import ExamTake from './pages/student/ExamTake'
+import ExamResult from './pages/student/ExamResult'
+import PublicLeaderboard from './pages/student/PublicLeaderboard'
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFF] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+function Redirect({ to }: { to: string }) {
+  const { navigate } = useRouter()
+  useEffect(() => {
+    navigate(to, true)
+  }, [])
+  return null
+}
+
+function NotFound() {
+  const { navigate } = useRouter()
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <p className="text-6xl font-black text-indigo-200 mb-4">404</p>
+        <h1 className="text-xl font-bold text-gray-700 mb-2">الصفحة غير موجودة</h1>
+        <button onClick={() => navigate('/admin')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">العودة</button>
       </div>
-    );
+    </div>
+  )
+}
+
+function Router() {
+  const { path } = useRouter()
+
+  // Student routes (no auth)
+  if (path.match(/^\/exam\/[^/]+$/)) return <ExamStart />
+  if (path.match(/^\/exam\/[^/]+\/take\/[^/]+$/)) return <ExamTake />
+  if (path.match(/^\/exam\/[^/]+\/result\/[^/]+$/)) return <ExamResult />
+  if (path.match(/^\/exam\/[^/]+\/leaderboard$/)) return <PublicLeaderboard />
+
+  // Login (Figma route + legacy URL kept working)
+  if (path === '/login' || path === '/admin/login') return <LoginPage />
+
+  // Root redirect
+  if (path === '/') return <Redirect to="/admin" />
+
+  // Legacy top-level redirects (kept from the previous app)
+  if (path === '/exams') return <Redirect to="/admin/exams" />
+  if (path === '/students') return <Redirect to="/admin/students" />
+  if (path === '/results') return <Redirect to="/admin/results" />
+  if (path === '/leaderboard') return <Redirect to="/admin/leaderboard" />
+
+  // Admin routes
+  if (path.startsWith('/admin')) {
+    // Legacy combined editor URL → questions builder
+    const legacyEditor = path.match(/^\/admin\/exams\/([^/]+)$/)
+    if (legacyEditor && legacyEditor[1] !== 'new') {
+      return <Redirect to={`/admin/exams/${legacyEditor[1]}/questions`} />
+    }
+
+    const adminRoutes: Array<{ pattern: string; element: React.ReactNode }> = [
+      { pattern: '/admin/exams/new', element: <CreateExam /> },
+      { pattern: '/admin/exams/:id/edit', element: <EditExam /> },
+      { pattern: '/admin/exams/:id/questions', element: <QuestionBuilder /> },
+      { pattern: '/admin/exams', element: <Exams /> },
+      { pattern: '/admin/results/:id', element: <ResultDetail /> },
+      { pattern: '/admin/results', element: <Results /> },
+      { pattern: '/admin/participants', element: <Participants /> },
+      { pattern: '/admin/students', element: <Participants /> },
+      { pattern: '/admin/leaderboard', element: <AdminLeaderboard /> },
+      { pattern: '/admin/settings', element: <Settings /> },
+      { pattern: '/admin', element: <Dashboard /> },
+    ]
+    const matched = adminRoutes.find(r => {
+      const parts = r.pattern.split('/')
+      const pathParts = path.split('/')
+      if (parts.length !== pathParts.length) return false
+      return parts.every((p, i) => p.startsWith(':') || p === pathParts[i])
+    })
+    return (
+      <ProtectedRoute>
+        <AdminLayout>
+          {matched?.element || <NotFound />}
+        </AdminLayout>
+      </ProtectedRoute>
+    )
   }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />;
-  }
-  return <Layout>{children}</Layout>;
-};
 
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <>{children}</>;
-};
+  return <Redirect to="/admin" />
+}
 
-export const AppRoutes: React.FC = () => {
+export default function App() {
   return (
-    <Routes>
-      {/* Public Exam Routes */}
-      <Route path="/exam/:slug" element={<PublicRoute><ExamLandingPage /></PublicRoute>} />
-      <Route path="/exam/:slug/take/:attemptId" element={<PublicRoute><ExamTakePage /></PublicRoute>} />
-      <Route path="/exam/:slug/result/:attemptId" element={<PublicRoute><ResultPage /></PublicRoute>} />
-      <Route path="/exam/:slug/leaderboard" element={<PublicRoute><PublicLeaderboardPage /></PublicRoute>} />
-      
-      {/* For backward compatibility */}
-      <Route path="/exam/:slug/result/:attemptId" element={<PublicRoute><ResultPage /></PublicRoute>} />
-
-      {/* Admin Auth */}
-      <Route path="/admin/login" element={<LoginPage />} />
-      <Route path="/login" element={<Navigate to="/admin/login" replace />} />
-
-      {/* Admin Protected Routes */}
-      <Route path="/admin" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/admin/exams" element={<ProtectedRoute><ExamsPage /></ProtectedRoute>} />
-      <Route path="/admin/exams/new" element={<ProtectedRoute><CreateExamPage /></ProtectedRoute>} />
-      <Route path="/admin/exams/:examId" element={<ProtectedRoute><ExamEditorPage /></ProtectedRoute>} />
-      <Route path="/admin/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
-      <Route path="/admin/results/:attemptId" element={<ProtectedRoute><ResultDetailPage /></ProtectedRoute>} />
-      <Route path="/admin/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-      <Route path="/admin/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
-      <Route path="/admin/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-
-      {/* Legacy redirects */}
-      <Route path="/" element={<Navigate to="/admin" replace />} />
-      <Route path="/exams" element={<Navigate to="/admin/exams" replace />} />
-      <Route path="/exams/:examId" element={<Navigate to="/admin/exams" replace />} />
-      <Route path="/students" element={<Navigate to="/admin/students" replace />} />
-      <Route path="/results" element={<Navigate to="/admin/results" replace />} />
-      <Route path="/leaderboard" element={<Navigate to="/admin/leaderboard" replace />} />
-
-      <Route path="*" element={<Navigate to="/admin" replace />} />
-    </Routes>
-  );
-};
-
-export const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
-  );
-};
-
-export default App;
+    <RouterProvider>
+      <AuthProvider>
+        <DataProvider>
+          <Router />
+        </DataProvider>
+      </AuthProvider>
+    </RouterProvider>
+  )
+}
