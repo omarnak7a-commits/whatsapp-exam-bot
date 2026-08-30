@@ -231,7 +231,10 @@ export default function ExamTake() {
                     })}
                   </div>
                 ) : (
-                  <div className={`rounded-2xl p-5 text-center ${feedback.isCorrect ? 'bg-green-50 border-2 border-green-300' : 'bg-red-50 border-2 border-red-300'}`}>
+                  <div className={`relative overflow-hidden rounded-2xl p-5 text-center ${feedback.isCorrect ? 'bg-green-50 border-2 border-green-300' : 'bg-red-50 border-2 border-red-300'} [container-type:inline-size]`}>
+                    {/* Keep the branding watermark visible during instant feedback too — behind content, non-interactive */}
+                    <ExamWatermark />
+                    <div className="relative z-10">
                     <p className="text-3xl mb-2">{feedback.isCorrect ? '✅' : '❌'}</p>
                     <p className={`text-lg font-black mb-2 ${feedback.isCorrect ? 'text-green-700' : 'text-red-600'}`}>
                       {feedback.isCorrect ? 'إجابة صحيحة!' : 'إجابة خاطئة'}
@@ -250,6 +253,7 @@ export default function ExamTake() {
                     >
                       {currentIdx < questions.length - 1 ? 'السؤال التالي ←' : 'إنهاء الامتحان'}
                     </button>
+                    </div>
                   </div>
                 )}
               </div>

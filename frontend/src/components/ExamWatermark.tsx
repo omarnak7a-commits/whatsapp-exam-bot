@@ -36,9 +36,10 @@ export default function ExamWatermark({
           // value above) by browsers that do not support cqw. Sized so the
           // rotated text spans ~87% of the card and never overflows it.
           fontSize: 'min(5.25rem, 14.5cqw)',
-          // Subtle (~6%) and slightly diagonal.
-          opacity: 0.06,
-          transform: 'rotate(-15deg)',
+          // 10% opacity: clearly visible over the white card yet subtle enough
+          // that the question stays easy to read. Slightly diagonal.
+          opacity: 0.1,
+          transform: 'rotate(-16deg)',
           letterSpacing: '0.02em',
           userSelect: 'none',
           WebkitUserSelect: 'none',
