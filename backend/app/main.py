@@ -70,10 +70,31 @@ SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
         ("total_score", "INTEGER", "0"),
         ("completion_time_seconds", "INTEGER", "0"),
         ("ranking", "INTEGER", None),
+        # The original WhatsApp-bot schema did not persist question/option order
+        # in exam_attempts (it kept them in attempt_questions/attempt_options).
+        # The web flow writes these columns on every attempt, so a legacy DB
+        # that is missing them fails attempt creation with UndefinedColumn.
+        ("question_order_json", "TEXT", None),
+        ("option_order_json", "TEXT", None),
     ],
     "attempt_answers": [
         ("option_id", "INTEGER", None),
         ("points_awarded", "INTEGER", "0"),
+    ],
+}
+
+# Column ATTRIBUTES the ORM models expect but legacy databases may still enforce.
+# Unlike SCHEMA_FIXES (which only ADDs missing columns), these also relax
+# constraints that already exist - e.g. the original WhatsApp-bot `students`
+# table required a whatsapp_number, while the web flow creates students by name
+# only. Without this, the first anonymous student insert fails on PostgreSQL
+# with NotNullViolation -> 500 on "ابدأ الامتحان".
+# Values are (table, column, "DROP NOT NULL") and are applied only on
+# PostgreSQL (SQLite cannot ALTER COLUMN this way; local/test schemas are
+# created from the ORM and already match).
+SCHEMA_ATTRIBUTE_FIXES: dict[str, list[tuple[str, str]]] = {
+    "students": [
+        ("whatsapp_number", "DROP NOT NULL"),
     ],
 }
 
@@ -134,6 +155,24 @@ async def _apply_schema_fixes(conn) -> None:
                 logger.warning(
                     "Schema fix skipped for %s.%s: %s", table, column, e
                 )
+
+    # Relax column attributes that legacy schemas enforce differently from the
+    # ORM (PostgreSQL only; safe no-op when the column is already nullable).
+    if dialect != "sqlite":
+        for table, attributes in SCHEMA_ATTRIBUTE_FIXES.items():
+            for column, attribute in attributes:
+                stmt = f"ALTER TABLE {table} ALTER COLUMN {column} {attribute}"
+                await conn.execute(text("SAVEPOINT schema_attr_fix"))
+                try:
+                    await conn.execute(text(stmt))
+                    await conn.execute(text("RELEASE SAVEPOINT schema_attr_fix"))
+                    logger.info("Schema attribute fix applied: %s.%s %s", table, column, attribute)
+                except Exception as e:  # noqa: BLE001
+                    await conn.execute(text("ROLLBACK TO SAVEPOINT schema_attr_fix"))
+                    await conn.execute(text("RELEASE SAVEPOINT schema_attr_fix"))
+                    logger.warning(
+                        "Schema attribute fix skipped for %s.%s: %s", table, column, e
+                    )
 
 
 async def _ensure_schema_on_conn(conn) -> None:
