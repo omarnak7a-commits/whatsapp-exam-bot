@@ -1,114 +1,37 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  * {
-    @apply border-slate-200 dark:border-slate-700;
-  }
-  
-  html {
-    direction: rtl;
-    font-family: 'Cairo', 'Tajawal', system-ui, sans-serif;
-  }
-
-  body {
-    @apply bg-[#F8FAFF] text-slate-900 font-cairo antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-
-  body.dark {
-    @apply bg-[#070B1A] text-slate-100;
-  }
-
-  /* RTL Support */
-  [dir="rtl"] {
-    direction: rtl;
-  }
-
-  [dir="ltr"] {
-    direction: ltr;
-  }
+html,
+body,
+#root {
+  height: 100%;
 }
 
-@layer components {
-  .glass {
-    @apply backdrop-blur-xl bg-white/80 dark:bg-slate-900/80;
-  }
-  
-  .card {
-    @apply bg-white dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 rounded-[20px] shadow-soft;
-  }
-
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-xl hover:shadow-brand/10 hover:-translate-y-1;
-  }
-
-  .btn-primary {
-    @apply bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white font-bold rounded-2xl px-6 py-3 shadow-brand transition-all duration-200 hover:shadow-brand-lg hover:scale-[1.02] active:scale-[0.98];
-  }
-
-  .btn-secondary {
-    @apply bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-2xl px-6 py-3 transition-all duration-200;
-  }
-
-  .input-field {
-    @apply w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200;
-  }
-
-  .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold;
-  }
-
-  .shimmer {
-    @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent;
-  }
+body {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+* {
+  box-sizing: border-box;
 }
 
-/* Custom Scrollbars */
+/* Hide scrollbar by default, show on hover/scroll */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100 dark:bg-slate-900;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+  background: #d1d5db;
+  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-slate-600;
-}
-
-/* Focus visible */
-:focus-visible {
-  @apply outline-none ring-4 ring-brand-500/30;
-}
-
-/* Animations for exam */
-.answer-card {
-  @apply relative bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-lg hover:shadow-brand-500/5;
-}
-
-.answer-card.selected {
-  @apply border-brand-500 bg-brand-50 dark:bg-brand-950/50 shadow-lg shadow-brand-500/20 scale-[1.01];
-}
-
-.answer-card.correct {
-  @apply border-accent-500 bg-accent-50 dark:bg-accent-500/10;
-}
-
-.answer-card.wrong {
-  @apply border-red-500 bg-red-50 dark:bg-red-500/10;
+  background: #9ca3af;
 }

@@ -34,7 +34,13 @@ Open Link (/exam/{slug}) → Read Info → Enter Name → Start → Answer → T
 - 🧮 تصحيح فوري، نسبة مئوية، وقت الإكمال، وترتيب
 - 🏆 لوحة متصدرين عامة مع قواعد كسر تعادل (درجة → وقت → وقت التسليم)
 - 📊 لوحة تحكم إدارية RTL عصرية مع إحصائيات حقيقية
-- 🌓 Light/Dark Mode مع حفظ التفضيل
+- ☀️ وضع فاتح فقط (Light Mode) بتصميم نظيف وعصري
+- 💧 علامة مائية خفيفة «مس ايه فايز» داخل كل بطاقة سؤال
+- ⚙️ إعدادات لكل امتحان: تصحيح فوري / إظهار الإجابات الصحيحة / Leaderboard
+- ❓ نوعا أسئلة: اختيار من متعدد (2-4 خيارات) و صح/غلط تلقائياً
+- 🔀 إعادة ترتيب الأسئلة والاختيارات + نسخ سؤال + نسخ امتحان
+- 📱 QR Code لمشاركة رابط الامتحان بسهولة
+- ⚙️ صفحة إعدادات للمدير (البيانات + كلمة المرور + هوية المنصة)
 - 📱 Responsive 100% - مُحسن للموبايل أولاً
 
 ---
@@ -53,7 +59,7 @@ Open Link (/exam/{slug}) → Read Info → Enter Name → Start → Answer → T
 - **React 18** & **TypeScript** & **Vite**
 - **Tailwind CSS** مع نظام ألوان مستخرج من اللوجو
 - **Lucide Icons**
-- RTL-first، Light/Dark، Animations
+- RTL-first، Light Mode فقط، Animations
 
 ### Infrastructure
 - **Docker** & **docker-compose**
@@ -88,7 +94,7 @@ jebt-kam/
 │   │   │   ├── ui/          # Button, Input, Card, Badge, Logo
 │   │   │   ├── layout/      # Layout, Navbar, Sidebar
 │   │   │   └── exam/        # (future)
-│   │   ├── contexts/        # AuthContext, ThemeContext
+│   │   ├── contexts/        # AuthContext
 │   │   ├── pages/
 │   │   │   ├── public/      # ExamLanding, ExamTake, Result, PublicLeaderboard
 │   │   │   └── admin/       # Dashboard, Exams, ExamEditor, CreateExam, Results, Students, Leaderboard, Login
@@ -411,7 +417,7 @@ ADMIN_PASSWORD
 - [x] Admin results, attempt details, export CSV
 - [x] Students aggregation
 - [x] Close exam blocks new attempts
-- [x] Responsive, RTL, Light/Dark, Loading, Error, Empty states
+- [x] Responsive, RTL, Light Mode only, Loading, Error, Empty states
 - [x] Migrations
 - [x] Docker
 - [x] Tests pass

@@ -35,6 +35,9 @@ async def get_public_exam(slug: str, db: AsyncSession = Depends(get_db)):
         "questions_count": questions_count,
         "total_points": total_points,
         "status": exam.status,
+        "instant_feedback_enabled": bool(exam.instant_feedback_enabled),
+        "show_correct_answers": bool(exam.show_correct_answers),
+        "leaderboard_enabled": bool(exam.leaderboard_enabled),
     }
 
 
@@ -57,6 +60,9 @@ async def create_attempt(slug: str, data: CreateAttemptRequest, db: AsyncSession
         "total_questions": attempt.total_questions,
         "total_score": attempt.total_score,
         "answered_count": 0,
+        "instant_feedback_enabled": bool(exam.instant_feedback_enabled),
+        "show_correct_answers": bool(exam.show_correct_answers),
+        "leaderboard_enabled": bool(exam.leaderboard_enabled),
     }
 
 
@@ -118,6 +124,9 @@ async def get_attempt(attempt_id: int, db: AsyncSession = Depends(get_db)):
             "title": exam.title,
             "description": exam.description,
             "duration_minutes": exam.duration_minutes,
+            "instant_feedback_enabled": bool(exam.instant_feedback_enabled),
+            "show_correct_answers": bool(exam.show_correct_answers),
+            "leaderboard_enabled": bool(exam.leaderboard_enabled),
         },
         "questions": questions_data,
     }
@@ -129,7 +138,6 @@ async def save_answer(attempt_id: int, data: AnswerRequest, db: AsyncSession = D
     attempt = await service.save_answer(attempt_id, data.question_id, data.option_id)
 
     # Count answers
-    from sqlalchemy import select
     from app.models.attempt_answer import AttemptAnswer
     result = await db.execute(select(AttemptAnswer).where(AttemptAnswer.attempt_id == attempt_id))
     answered = len(list(result.scalars().all()))
@@ -144,14 +152,31 @@ async def save_answer(attempt_id: int, data: AnswerRequest, db: AsyncSession = D
     except ValueError:
         next_id = None
 
-    return {
+    payload = {
         "attempt_id": attempt_id,
         "question_id": data.question_id,
         "option_id": data.option_id,
         "answered_count": answered,
         "next_question_id": next_id,
         "is_last": next_id is None,
+        # Correctness is ONLY revealed when instant feedback is enabled.
+        "is_correct": None,
+        "correct_option_text": None,
     }
+
+    if bool(exam.instant_feedback_enabled):
+        question = next((q for q in exam.questions if q.id == data.question_id), None)
+        correct_opt = next((o for o in (question.options if question else []) if o.is_correct), None)
+        payload["is_correct"] = bool(correct_opt) and correct_opt.id == data.option_id
+        payload["correct_option_text"] = (correct_opt.text or correct_opt.option_text) if correct_opt else None
+
+    return payload
+
+
+@router.post("/attempts/{attempt_id}/complete")
+async def complete_attempt(attempt_id: int, db: AsyncSession = Depends(get_db)):
+    """Spec alias of submit - ends the attempt and scores it server-side."""
+    return await submit_attempt(attempt_id, db)
 
 
 @router.post("/attempts/{attempt_id}/submit")
@@ -205,7 +230,9 @@ async def get_result(attempt_id: int, db: AsyncSession = Depends(get_db)):
         for entry in leaderboard
     ]
 
-    total_ranked = len(leaderboard)
+    show_correct = bool(exam.show_correct_answers)
+    lb_enabled = bool(exam.leaderboard_enabled)
+    total_ranked = len(leaderboard) if lb_enabled else 0
 
     return {
         "attempt_id": attempt.id,
@@ -216,13 +243,16 @@ async def get_result(attempt_id: int, db: AsyncSession = Depends(get_db)):
         "total_score": attempt.total_score,
         "percentage": attempt.percentage,
         "completion_time_seconds": attempt.completion_time_seconds or attempt.completion_seconds or 0,
-        "ranking": attempt.ranking or attempt.final_rank,
+        "ranking": (attempt.ranking or attempt.final_rank) if lb_enabled else None,
         "total_ranked": total_ranked,
         "correct_answers": data["correct"],
         "wrong_answers": data["wrong"],
         "unanswered": data["unanswered"],
-        "answers": data["detailed_answers"],
-        "leaderboard": lb_data,
+        # Correct answers are only exposed when the admin enabled it.
+        "answers": data["detailed_answers"] if show_correct else [],
+        "show_correct_answers": show_correct,
+        "leaderboard_enabled": lb_enabled,
+        "leaderboard": lb_data if lb_enabled else [],
         "status": attempt.status,
         "started_at": attempt.started_at,
         "submitted_at": attempt.submitted_at or attempt.finished_at,
@@ -233,6 +263,8 @@ async def get_result(attempt_id: int, db: AsyncSession = Depends(get_db)):
 async def get_leaderboard(slug: str, db: AsyncSession = Depends(get_db)):
     service = PublicAttemptService(db)
     exam = await service.get_public_exam(slug)
+    if not bool(exam.leaderboard_enabled):
+        raise HTTPException(status_code=403, detail="لوحة الترتيب غير مفعلة لهذا الامتحان")
     leaderboard = await service.ranking_service.get_leaderboard(exam.id)
 
     return [

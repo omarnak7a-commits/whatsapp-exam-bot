@@ -81,6 +81,9 @@ class ExamService:
             randomize_options=False,
             one_attempt_only=False,
             show_correct_answer_immediately=False,
+            instant_feedback_enabled=bool(data.instant_feedback_enabled),
+            show_correct_answers=bool(data.show_correct_answers),
+            leaderboard_enabled=bool(data.leaderboard_enabled),
         )
         return await self.repo.create(exam)
 
@@ -116,6 +119,9 @@ class ExamService:
                 duration_minutes=dm,
                 duration_seconds=e.duration_seconds or dm * 60,
                 status=e.status,
+                instant_feedback_enabled=bool(e.instant_feedback_enabled),
+                show_correct_answers=bool(e.show_correct_answers),
+                leaderboard_enabled=bool(e.leaderboard_enabled),
                 created_at=e.created_at,
                 updated_at=e.updated_at,
                 published_at=e.published_at,
@@ -182,6 +188,9 @@ class ExamService:
             duration_minutes=original.duration_minutes,
             duration_seconds=original.duration_seconds,
             status=ExamStatus.DRAFT.value,
+            instant_feedback_enabled=bool(original.instant_feedback_enabled),
+            show_correct_answers=bool(original.show_correct_answers),
+            leaderboard_enabled=bool(original.leaderboard_enabled),
         )
         new_exam = await self.repo.create(new_exam)
 

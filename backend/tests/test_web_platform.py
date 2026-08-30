@@ -104,15 +104,11 @@ async def test_full_web_exam_flow(client: AsyncClient, admin_auth_token: str):
     res_ans2 = await client.post(f"/api/public/attempts/{attempt_id}/answers", json={"question_id": q2_id, "option_id": wrong_opt["id"]})
     assert res_ans2.status_code == 200
 
-    # 9. Change answer for first question (should be allowed - upsert)
-    # Change to wrong answer
+    # 9. Duplicate submission must be rejected - answers are final
+    # Try to change the answer to a wrong one
     wrong_opt_q1 = next(o for o in q1_options if o["id"] != correct_map[q1_id])
     res_ans_change = await client.post(f"/api/public/attempts/{attempt_id}/answers", json={"question_id": q1_id, "option_id": wrong_opt_q1["id"]})
-    assert res_ans_change.status_code == 200
-
-    # Change back to correct
-    res_ans_correct_again = await client.post(f"/api/public/attempts/{attempt_id}/answers", json={"question_id": q1_id, "option_id": correct_map[q1_id]})
-    assert res_ans_correct_again.status_code == 200
+    assert res_ans_change.status_code == 409, res_ans_change.text
 
     # 10. Submit attempt
     res_submit = await client.post(f"/api/public/attempts/{attempt_id}/submit")
@@ -247,3 +243,79 @@ async def test_duplicate_student_handling(client: AsyncClient, admin_auth_token:
     # Should create new attempt with same student_id (since we reuse student)
     assert res2.status_code == 200
     assert res2.json()["student_id"] == student1_id
+
+
+@pytest.mark.asyncio
+async def test_exam_settings_flags(client: AsyncClient, admin_auth_token: str):
+    """Instant feedback reveal, correct-answer hiding and leaderboard gating."""
+    headers = {"Authorization": f"Bearer {admin_auth_token}"}
+
+    res = await client.post("/api/exams", json={
+        "title": "امتحان إعدادات الخصوصية",
+        "duration_minutes": 5,
+        "instant_feedback_enabled": True,
+        "show_correct_answers": False,
+        "leaderboard_enabled": False,
+    }, headers=headers)
+    assert res.status_code == 201, res.text
+    exam = res.json()
+    assert exam["instant_feedback_enabled"] is True
+    assert exam["show_correct_answers"] is False
+    assert exam["leaderboard_enabled"] is False
+    exam_id = exam["id"]
+
+    res_q = await client.post(f"/api/exams/{exam_id}/questions", json={
+        "text": "هل الشمس تشرق من الشرق؟",
+        "points": 1,
+        "options": [
+            {"text": "صح", "is_correct": True, "order_index": 0},
+            {"text": "غلط", "is_correct": False, "order_index": 1},
+        ],
+    }, headers=headers)
+    assert res_q.status_code == 201
+
+    res_pub = await client.post(f"/api/exams/{exam_id}/publish", headers=headers)
+    assert res_pub.status_code == 200
+    slug = res_pub.json()["public_slug"]
+
+    pub = (await client.get(f"/api/public/exams/{slug}")).json()
+    assert pub["instant_feedback_enabled"] is True
+    assert pub["leaderboard_enabled"] is False
+
+    att = (await client.post(f"/api/public/exams/{slug}/attempts", json={"student_name": "سارة"})).json()
+    aid = att["id"]
+    assert att["instant_feedback_enabled"] is True
+
+    detail = (await client.get(f"/api/public/attempts/{aid}")).json()
+    q = detail["questions"][0]
+    assert detail["exam"]["leaderboard_enabled"] is False
+
+    # Correctness is revealed per-answer because instant feedback is ON
+    res_ans = await client.post(f"/api/public/attempts/{aid}/answers", json={
+        "question_id": q["id"], "option_id": q["options"][0]["id"],
+    })
+    assert res_ans.status_code == 200
+    body = res_ans.json()
+    assert body["is_correct"] is True
+    assert body["correct_option_text"] == "صح"
+
+    # /complete alias ends the attempt
+    res_complete = await client.post(f"/api/public/attempts/{aid}/complete")
+    assert res_complete.status_code == 200
+    assert res_complete.json()["status"] in ["COMPLETED", "EXPIRED"]
+
+    # Result must hide correct answers and leaderboard
+    res_result = await client.get(f"/api/public/attempts/{aid}/result")
+    assert res_result.status_code == 200
+    result = res_result.json()
+    assert result["show_correct_answers"] is False
+    assert result["answers"] == []
+    assert result["leaderboard_enabled"] is False
+    assert result["leaderboard"] == []
+    assert result["ranking"] is None
+    # Score still calculated server-side
+    assert result["score"] == 1
+
+    # Public leaderboard endpoint is gated
+    res_lb = await client.get(f"/api/public/exams/{slug}/leaderboard")
+    assert res_lb.status_code == 403

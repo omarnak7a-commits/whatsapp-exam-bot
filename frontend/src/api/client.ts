@@ -66,6 +66,9 @@ export async function apiFetch<T>(
     } catch {
       // ignore json parse error
     }
+    // Real server error stays in the browser console for debugging,
+    // while the user sees the friendly Arabic message only.
+    console.error(`[api] ${response.status} ${endpoint}:`, errorDetail);
     throw new Error(errorDetail);
   }
 
@@ -97,6 +100,7 @@ export async function publicFetch<T>(
       const errData = await response.json();
       errorDetail = errData.detail || errorDetail;
     } catch {}
+    console.error(`[public] ${response.status} ${endpoint}:`, errorDetail);
     throw new Error(errorDetail);
   }
 
