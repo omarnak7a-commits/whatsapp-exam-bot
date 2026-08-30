@@ -4,7 +4,7 @@ import { Sidebar, MobileNav } from './Sidebar';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A] flex flex-col font-cairo" dir="rtl">
+    <div className="min-h-screen bg-[#F8FAFF] flex flex-col font-cairo" dir="rtl">
       <Navbar />
       <div className="flex flex-1 max-w-[1600px] mx-auto w-full">
         <Sidebar />
@@ -19,7 +19,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 export const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A] font-cairo" dir="rtl">
+    <div className="min-h-screen bg-[#F8FAFF] font-cairo" dir="rtl">
       {children}
     </div>
   );

@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -11,6 +10,7 @@ import { CreateExamPage } from './pages/CreateExamPage';
 import { ResultsPage, ResultDetailPage } from './pages/ResultsPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ExamLandingPage } from './pages/public/ExamLandingPage';
 import { ExamTakePage } from './pages/public/ExamTakePage';
 import { ResultPage } from './pages/public/ResultPage';
@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8FAFF] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
       </div>
     );
@@ -62,6 +62,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/admin/results/:attemptId" element={<ProtectedRoute><ResultDetailPage /></ProtectedRoute>} />
       <Route path="/admin/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
       <Route path="/admin/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
       {/* Legacy redirects */}
       <Route path="/" element={<Navigate to="/admin" replace />} />
@@ -78,13 +79,11 @@ export const AppRoutes: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
   );
 };
 

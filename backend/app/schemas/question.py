@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class OptionBase(BaseModel):
@@ -54,17 +54,29 @@ class PublicOptionOut(BaseModel):
     order_index: int
 
 
+QUESTION_TYPES = {"multiple_choice", "true_false"}
+
+
 class QuestionCreate(BaseModel):
     text: str
     order_index: int = 0
     points: int = 1
-    options: List[OptionCreate] = Field(..., min_length=2, description="At least 2 options required")
+    question_type: str = "multiple_choice"
+    options: List[OptionCreate] = Field(..., min_length=2, max_length=4, description="2-4 options required")
+
+    @field_validator("question_type")
+    @classmethod
+    def _valid_type(cls, v: str) -> str:
+        if v not in QUESTION_TYPES:
+            raise ValueError("question_type must be multiple_choice or true_false")
+        return v
 
 
 class QuestionUpdate(BaseModel):
     text: Optional[str] = None
     order_index: Optional[int] = None
     points: Optional[int] = None
+    question_type: Optional[str] = None
     options: Optional[List[OptionCreate]] = None
 
 
@@ -76,6 +88,7 @@ class QuestionOut(BaseModel):
     text: str
     order_index: int
     points: int
+    question_type: str = "multiple_choice"
     created_at: datetime
     options: List[OptionOut]
 

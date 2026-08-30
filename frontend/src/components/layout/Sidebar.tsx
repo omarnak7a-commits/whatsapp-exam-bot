@@ -1,18 +1,20 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, Award, Trophy, Settings, Plus } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Trophy, Settings, Plus, Award } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const navItems = [
     { to: '/admin', label: 'الرئيسية', icon: LayoutDashboard, exact: true },
     { to: '/admin/exams', label: 'الامتحانات', icon: FileText },
+    { to: '/admin/exams/new', label: 'إنشاء امتحان', icon: Plus },
     { to: '/admin/results', label: 'النتائج', icon: Award },
-    { to: '/admin/students', label: 'الطلاب', icon: Users },
-    { to: '/admin/leaderboard', label: 'المتصدرين', icon: Trophy },
+    { to: '/admin/students', label: 'المشاركون', icon: Users },
+    { to: '/admin/leaderboard', label: 'الترتيب', icon: Trophy },
+    { to: '/admin/settings', label: 'الإعدادات', icon: Settings },
   ];
 
   return (
-    <aside className="w-[280px] hidden lg:block bg-white dark:bg-slate-900 border-l border-slate-200/60 dark:border-slate-800 min-h-[calc(100vh-73px)] p-6 sticky top-[73px] h-fit">
+    <aside className="w-[280px] hidden lg:block bg-white border-l border-slate-200/60 min-h-[calc(100vh-73px)] p-6 sticky top-[73px] h-fit">
       <div className="space-y-6">
         <NavLink
           to="/admin/exams/new"
@@ -22,8 +24,8 @@ export const Sidebar: React.FC = () => {
           <span>إنشاء امتحان جديد</span>
         </NavLink>
 
-        <nav className="space-y-1.5">
-          <p className="text-[11px] font-black tracking-widest text-slate-400 dark:text-slate-500 px-3 py-2">القائمة الرئيسية</p>
+        <nav className="space-y-1.5" aria-label="القائمة الرئيسية">
+          <p className="text-[11px] font-black tracking-widest text-slate-400 px-3 py-2">القائمة الرئيسية</p>
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -34,8 +36,8 @@ export const Sidebar: React.FC = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-[14px] transition-all duration-200 ${
                     isActive
-                      ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300 border border-brand-200/50 dark:border-brand-800/30 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-brand-50 text-brand-700 border border-brand-200/50 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`
                 }
               >
@@ -46,7 +48,7 @@ export const Sidebar: React.FC = () => {
           })}
         </nav>
 
-        <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="pt-6 border-t border-slate-200">
           <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-[20px] p-5 text-white relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-accent-500/20 rounded-full blur-2xl" />
@@ -70,11 +72,12 @@ export const MobileNav: React.FC = () => {
     { to: '/admin', label: 'الرئيسية', icon: LayoutDashboard, exact: true },
     { to: '/admin/exams', label: 'الامتحانات', icon: FileText },
     { to: '/admin/results', label: 'النتائج', icon: Award },
-    { to: '/admin/students', label: 'الطلاب', icon: Users },
+    { to: '/admin/students', label: 'المشاركون', icon: Users },
+    { to: '/admin/settings', label: 'الإعدادات', icon: Settings },
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-2 py-2 z-40">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 px-2 py-2 z-40" aria-label="التنقل السفلي">
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -84,10 +87,8 @@ export const MobileNav: React.FC = () => {
               to={item.to}
               end={item.exact}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all ${
-                  isActive
-                    ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50'
-                    : 'text-slate-500 dark:text-slate-400'
+                `flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all ${
+                  isActive ? 'text-brand-600 bg-brand-50' : 'text-slate-500'
                 }`
               }
             >

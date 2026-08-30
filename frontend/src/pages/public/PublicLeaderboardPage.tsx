@@ -48,7 +48,7 @@ export const PublicLeaderboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A]" dir="rtl">
+    <div className="min-h-screen bg-[#F8FAFF]" dir="rtl">
       <PublicNavbar />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -56,20 +56,20 @@ export const PublicLeaderboardPage: React.FC = () => {
           <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[20px] flex items-center justify-center mx-auto mb-4 shadow-xl shadow-amber-500/20">
             <Trophy className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white">لوحة المتصدرين</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2 font-medium">{examTitle}</p>
+          <h1 className="text-3xl font-black text-slate-900">لوحة المتصدرين</h1>
+          <p className="text-slate-600 mt-2 font-medium">{examTitle}</p>
         </div>
 
         {loading ? (
           <div className="space-y-3">
             {[1,2,3,4,5].map(i => (
-              <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
+              <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : leaderboard.length === 0 ? (
           <Card className="text-center py-16">
-            <Trophy className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-            <h3 className="font-black text-slate-900 dark:text-white">لسه مفيش متصدرين</h3>
+            <Trophy className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="font-black text-slate-900">لسه مفيش متصدرين</h3>
             <p className="text-sm text-slate-500 mt-2">كون أول واحد يمتحن ويتصدر اللوحة! 🚀</p>
             <Link to={`/exam/${slug}`} className="inline-block mt-6">
               <Button>ابدأ الامتحان</Button>
@@ -84,11 +84,11 @@ export const PublicLeaderboardPage: React.FC = () => {
                   const entry = leaderboard[idx];
                   if (!entry) return null;
                   return (
-                    <Card key={entry.rank} className={`text-center ${entry.rank === 1 ? 'border-2 border-amber-200 dark:border-amber-800/50 md:scale-105' : ''}`}>
+                    <Card key={entry.rank} className={`text-center ${entry.rank === 1 ? 'border-2 border-amber-200 md:scale-105' : ''}`}>
                       <div className="text-4xl mb-3">
                         {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉'}
                       </div>
-                      <h3 className="font-black text-slate-900 dark:text-white">{entry.student_name}</h3>
+                      <h3 className="font-black text-slate-900">{entry.student_name}</h3>
                       <p className="text-sm text-slate-500 mt-1">{entry.score}/{entry.total_score} • {Math.round(entry.percentage)}%</p>
                       <p className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -101,25 +101,25 @@ export const PublicLeaderboardPage: React.FC = () => {
             )}
 
             <Card padding="none" className="overflow-hidden">
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-slate-100">
                 {leaderboard.map((entry) => (
-                  <div key={`${entry.rank}-${entry.student_name}`} className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div key={`${entry.rank}-${entry.student_name}`} className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
-                      entry.rank === 1 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
-                      entry.rank === 2 ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' :
-                      entry.rank === 3 ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400' :
-                      'bg-slate-50 dark:bg-slate-800 text-slate-500'
+                      entry.rank === 1 ? 'bg-amber-100 text-amber-700' :
+                      entry.rank === 2 ? 'bg-slate-100 text-slate-600' :
+                      entry.rank === 3 ? 'bg-amber-50 text-amber-700' :
+                      'bg-slate-50 text-slate-500'
                     }`}>
                       {entry.rank <= 3 ? (entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉') : entry.rank}
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-slate-900 dark:text-white truncate">{entry.student_name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{entry.score}/{entry.total_score} • {formatTime(entry.completion_time_seconds)}</p>
+                      <p className="font-black text-slate-900 truncate">{entry.student_name}</p>
+                      <p className="text-xs text-slate-500">{entry.score}/{entry.total_score} • {formatTime(entry.completion_time_seconds)}</p>
                     </div>
                     
                     <div className="text-left">
-                      <p className="font-black text-slate-900 dark:text-white">{Math.round(entry.percentage)}%</p>
+                      <p className="font-black text-slate-900">{Math.round(entry.percentage)}%</p>
                     </div>
                   </div>
                 ))}

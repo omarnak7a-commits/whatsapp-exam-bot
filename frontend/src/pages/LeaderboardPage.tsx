@@ -74,11 +74,11 @@ export const LeaderboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+        <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
           <Trophy className="w-8 h-8 text-amber-500" />
           لوحة المتصدرين
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">ترتيب الطلاب حسب الأداء والسرعة</p>
+        <p className="text-slate-500 mt-1 font-medium">ترتيب الطلاب حسب الأداء والسرعة</p>
       </div>
 
       <Card padding="sm">
@@ -90,7 +90,7 @@ export const LeaderboardPage: React.FC = () => {
               className={`px-5 py-3 rounded-2xl font-bold text-sm whitespace-nowrap border-2 transition-all ${
                 selectedExam === exam.id
                   ? 'bg-brand-600 border-brand-600 text-white shadow-brand'
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
               }`}
             >
               {exam.title}
@@ -102,14 +102,14 @@ export const LeaderboardPage: React.FC = () => {
       {loading ? (
         <div className="space-y-3">
           {[1,2,3,4,5].map(i => (
-            <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
+            <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : leaderboard.length === 0 ? (
         <Card className="text-center py-16">
-          <Trophy className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="font-black text-slate-900 dark:text-white">لسه مفيش متصدرين</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">أول ما الطلاب يخلصوا الامتحان، الترتيب هيظهر هنا</p>
+          <Trophy className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h3 className="font-black text-slate-900">لسه مفيش متصدرين</h3>
+          <p className="text-sm text-slate-500 mt-2">أول ما الطلاب يخلصوا الامتحان، الترتيب هيظهر هنا</p>
         </Card>
       ) : (
         <>
@@ -122,7 +122,7 @@ export const LeaderboardPage: React.FC = () => {
                 const isFirst = entry.rank === 1;
                 
                 return (
-                  <Card key={entry.rank} className={`text-center relative overflow-hidden ${isFirst ? 'md:order-2 border-2 border-amber-200 dark:border-amber-800/50 shadow-xl md:scale-105 md:-mt-4' : idx === 0 ? 'md:order-1' : 'md:order-3'}`}>
+                  <Card key={entry.rank} className={`text-center relative overflow-hidden ${isFirst ? 'md:order-2 border-2 border-amber-200 shadow-xl md:scale-105 md:-mt-4' : idx === 0 ? 'md:order-1' : 'md:order-3'}`}>
                     {isFirst && (
                       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-orange-500/20 rounded-full blur-2xl -translate-y-16 translate-x-16" />
                     )}
@@ -136,16 +136,16 @@ export const LeaderboardPage: React.FC = () => {
                         {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉'}
                       </div>
                       
-                      <h3 className="font-black text-slate-900 dark:text-white text-lg">{entry.student_name}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">المركز {entry.rank}</p>
+                      <h3 className="font-black text-slate-900 text-lg">{entry.student_name}</h3>
+                      <p className="text-sm text-slate-500 mt-1">المركز {entry.rank}</p>
                       
                       <div className="mt-4 grid grid-cols-2 gap-3 text-center">
-                        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2">
-                          <p className="font-black text-slate-900 dark:text-white">{entry.score}/{entry.total_score}</p>
+                        <div className="bg-slate-50 rounded-xl p-2">
+                          <p className="font-black text-slate-900">{entry.score}/{entry.total_score}</p>
                           <p className="text-[11px] text-slate-500">الدرجة</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2">
-                          <p className="font-black text-brand-600 dark:text-brand-400">{Math.round(entry.percentage)}%</p>
+                        <div className="bg-slate-50 rounded-xl p-2">
+                          <p className="font-black text-brand-600">{Math.round(entry.percentage)}%</p>
                           <p className="text-[11px] text-slate-500">النسبة</p>
                         </div>
                       </div>
@@ -161,7 +161,7 @@ export const LeaderboardPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="text-center px-6 py-4 text-xs font-black tracking-wide text-slate-500">الترتيب</th>
                     <th className="text-right px-6 py-4 text-xs font-black tracking-wide text-slate-500">الطالب</th>
                     <th className="text-center px-6 py-4 text-xs font-black tracking-wide text-slate-500">الدرجة</th>
@@ -169,15 +169,15 @@ export const LeaderboardPage: React.FC = () => {
                     <th className="text-center px-6 py-4 text-xs font-black tracking-wide text-slate-500">الوقت</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-100">
                   {leaderboard.map((entry) => (
-                    <tr key={`${entry.rank}-${entry.student_name}`} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/30 ${entry.rank <= 3 ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}>
+                    <tr key={`${entry.rank}-${entry.student_name}`} className={`hover:bg-slate-50/50 ${entry.rank <= 3 ? 'bg-amber-50/30' : ''}`}>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center">
                           {entry.rank <= 3 ? (
                             <span className="text-xl">{entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉'}</span>
                           ) : (
-                            <span className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-sm text-slate-600 dark:text-slate-400">
+                            <span className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center font-black text-sm text-slate-600">
                               {entry.rank}
                             </span>
                           )}
@@ -188,23 +188,23 @@ export const LeaderboardPage: React.FC = () => {
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-black">
                             {entry.student_name.charAt(0)}
                           </div>
-                          <span className="font-bold text-slate-900 dark:text-white">{entry.student_name}</span>
+                          <span className="font-bold text-slate-900">{entry.student_name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center font-black text-slate-900 dark:text-white">
+                      <td className="px-6 py-4 text-center font-black text-slate-900">
                         {entry.score}/{entry.total_score}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`px-3 py-1 rounded-full text-xs font-black ${
-                          entry.percentage >= 80 ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300' :
-                          entry.percentage >= 60 ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300' :
-                          'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
+                          entry.percentage >= 80 ? 'bg-emerald-50 text-emerald-700' :
+                          entry.percentage >= 60 ? 'bg-amber-50 text-amber-700' :
+                          'bg-red-50 text-red-700'
                         }`}>
                           {Math.round(entry.percentage)}%
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="font-mono text-sm font-bold text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1">
+                        <span className="font-mono text-sm font-bold text-slate-600 flex items-center justify-center gap-1">
                           <Clock className="w-4 h-4" />
                           {formatTime(entry.completion_time_seconds)}
                         </span>

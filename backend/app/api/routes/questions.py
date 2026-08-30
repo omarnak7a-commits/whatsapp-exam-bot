@@ -40,6 +40,7 @@ async def list_questions(
             text=q.text or q.question_text or "",
             order_index=q.order_index,
             points=getattr(q, 'points', 1) or 1,
+            question_type=getattr(q, 'question_type', 'multiple_choice') or 'multiple_choice',
             created_at=q.created_at,
             options=opts,
         ))
@@ -70,6 +71,7 @@ async def add_question(
         text=q.text or q.question_text or "",
         order_index=q.order_index,
         points=getattr(q, 'points', 1) or 1,
+        question_type=getattr(q, 'question_type', 'multiple_choice') or 'multiple_choice',
         created_at=q.created_at,
         options=opts,
     )
@@ -99,6 +101,7 @@ async def patch_question(
         text=q.text or q.question_text or "",
         order_index=q.order_index,
         points=getattr(q, 'points', 1) or 1,
+        question_type=getattr(q, 'question_type', 'multiple_choice') or 'multiple_choice',
         created_at=q.created_at,
         options=opts,
     )
@@ -150,6 +153,7 @@ async def reorder_questions(
             text=q.text or q.question_text or "",
             order_index=q.order_index,
             points=getattr(q, 'points', 1) or 1,
+            question_type=getattr(q, 'question_type', 'multiple_choice') or 'multiple_choice',
             created_at=q.created_at,
             options=opts,
         ))
@@ -179,6 +183,7 @@ async def duplicate_question(
         text=q.text or q.question_text or "",
         order_index=q.order_index,
         points=getattr(q, 'points', 1) or 1,
+        question_type=getattr(q, 'question_type', 'multiple_choice') or 'multiple_choice',
         created_at=q.created_at,
         options=opts,
     )

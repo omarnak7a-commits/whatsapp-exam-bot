@@ -44,10 +44,14 @@ SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
     "exams": [
         ("public_slug", "VARCHAR(100)", None),
         ("duration_minutes", "INTEGER", "20"),
+        ("instant_feedback_enabled", "BOOLEAN", "0"),
+        ("show_correct_answers", "BOOLEAN", "1"),
+        ("leaderboard_enabled", "BOOLEAN", "1"),
     ],
     "questions": [
         ("text", "TEXT", None),
         ("points", "INTEGER", "1"),
+        ("question_type", "VARCHAR(20)", "'multiple_choice'"),
     ],
     "options": [
         ("text", "VARCHAR(1000)", None),

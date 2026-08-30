@@ -87,8 +87,8 @@ export const DashboardPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white">أهلاً بيك! 👋</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">ده ملخص أداء منصتك النهاردة</p>
+          <h1 className="text-3xl font-black text-slate-900">أهلاً بيك! 👋</h1>
+          <p className="text-slate-500 mt-1 font-medium">ده ملخص أداء منصتك النهاردة</p>
         </div>
         <Button variant="secondary" onClick={fetchData} disabled={loading}>
           <RefreshCw className={`w-4 h-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
@@ -114,7 +114,7 @@ export const DashboardPage: React.FC = () => {
         {/* Recent Attempts */}
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-black text-slate-900 dark:text-white text-lg flex items-center gap-2">
+            <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
               <Clock className="w-5 h-5 text-brand-600" />
               آخر المحاولات
             </h3>
@@ -129,34 +129,34 @@ export const DashboardPage: React.FC = () => {
           {loading ? (
             <div className="space-y-3">
               {[1,2,3,4].map(i => (
-                <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
+                <div key={i} className="h-16 bg-slate-100 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : recentAttempts.length === 0 ? (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Award className="w-8 h-8 text-slate-400" />
               </div>
-              <p className="font-bold text-slate-600 dark:text-slate-400">لسه مفيش محاولات</p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">أول ما الطلاب يبدأوا يمتحنوا هتظهر هنا</p>
+              <p className="font-bold text-slate-600">لسه مفيش محاولات</p>
+              <p className="text-sm text-slate-500 mt-1">أول ما الطلاب يبدأوا يمتحنوا هتظهر هنا</p>
             </div>
           ) : (
             <div className="space-y-3">
               {recentAttempts.map((attempt) => (
-                <div key={attempt.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 hover:border-slate-200 dark:hover:border-slate-600 transition-colors">
+                <div key={attempt.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-200 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-black text-sm">
                       {attempt.student_name.charAt(0)}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">{attempt.student_name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{attempt.exam_title}</p>
+                      <p className="font-bold text-slate-900 text-sm">{attempt.student_name}</p>
+                      <p className="text-xs text-slate-500">{attempt.exam_title}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-left">
-                      <p className="font-black text-slate-900 dark:text-white text-sm">{attempt.score}/{attempt.total_score}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{attempt.percentage}%</p>
+                      <p className="font-black text-slate-900 text-sm">{attempt.score}/{attempt.total_score}</p>
+                      <p className="text-xs text-slate-500">{attempt.percentage}%</p>
                     </div>
                     <Badge variant={attempt.status === 'COMPLETED' ? 'success' : 'warning'} size="sm">
                       {attempt.status === 'COMPLETED' ? 'مكتمل' : attempt.status}
@@ -191,7 +191,7 @@ export const DashboardPage: React.FC = () => {
           </Card>
 
           <Card>
-            <h3 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <h3 className="font-black text-slate-900 mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-emerald-600" />
               نصائح سريعة
             </h3>
@@ -203,10 +203,10 @@ export const DashboardPage: React.FC = () => {
                 'تابع لوحة المتصدرين لتحفيز الطلاب',
               ].map((tip, i) => (
                 <div key={i} className="flex gap-3">
-                  <span className="w-6 h-6 rounded-full bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xs font-black flex-shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-xs font-black flex-shrink-0">
                     {i + 1}
                   </span>
-                  <span className="text-slate-600 dark:text-slate-300 font-medium">{tip}</span>
+                  <span className="text-slate-600 font-medium">{tip}</span>
                 </div>
               ))}
             </div>

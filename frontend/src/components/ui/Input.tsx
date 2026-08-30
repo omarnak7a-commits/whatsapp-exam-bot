@@ -10,18 +10,18 @@ export const Input: React.FC<InputProps> = ({ label, error, hint, className = ''
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+        <label className="block text-sm font-bold text-slate-700 mb-2">
           {label}
         </label>
       )}
       <input
         className={`
-          w-full bg-white dark:bg-slate-800 border rounded-2xl px-5 py-3.5
-          text-slate-900 dark:text-white placeholder-slate-400
+          w-full bg-white border rounded-2xl px-5 py-3.5
+          text-slate-900 placeholder-slate-400
           focus:outline-none focus:ring-4 transition-all duration-200
           ${error 
             ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
-            : 'border-slate-200 dark:border-slate-700 focus:border-brand-500 focus:ring-brand-500/20'
+            : 'border-slate-200 focus:border-brand-500 focus:ring-brand-500/20'
           }
           ${className}
         `}
@@ -42,18 +42,18 @@ export const Textarea: React.FC<TextareaProps> = ({ label, error, className = ''
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+        <label className="block text-sm font-bold text-slate-700 mb-2">
           {label}
         </label>
       )}
       <textarea
         className={`
-          w-full bg-white dark:bg-slate-800 border rounded-2xl px-5 py-3.5
-          text-slate-900 dark:text-white placeholder-slate-400
+          w-full bg-white border rounded-2xl px-5 py-3.5
+          text-slate-900 placeholder-slate-400
           focus:outline-none focus:ring-4 transition-all duration-200 resize-none
           ${error 
             ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' 
-            : 'border-slate-200 dark:border-slate-700 focus:border-brand-500 focus:ring-brand-500/20'
+            : 'border-slate-200 focus:border-brand-500 focus:ring-brand-500/20'
           }
           ${className}
         `}

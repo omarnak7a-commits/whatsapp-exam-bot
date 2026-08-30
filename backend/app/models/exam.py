@@ -30,6 +30,11 @@ class Exam(Base):
     duration_seconds = Column(Integer, nullable=False, default=1200)
 
     status = Column(String(20), default=ExamStatus.DRAFT.value, nullable=False, index=True)
+
+    # Per-exam behaviour settings (web platform)
+    instant_feedback_enabled = Column(Boolean, default=False, nullable=False)
+    show_correct_answers = Column(Boolean, default=True, nullable=False)
+    leaderboard_enabled = Column(Boolean, default=True, nullable=False)
     # Legacy fields kept for compatibility but not used in new flow
     number_of_questions = Column(Integer, nullable=False, default=10)
     randomize_questions = Column(Boolean, default=False, nullable=False)

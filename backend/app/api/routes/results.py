@@ -296,3 +296,20 @@ async def get_recent_attempts(
             final_rank=a.final_rank or a.ranking,
         ))
     return results
+
+
+# Spec-compliant aliases: /api/admin/results and /api/admin/results/{attempt_id}
+router.add_api_route(
+    "/admin/results",
+    list_results,
+    methods=["GET"],
+    response_model=List[AttemptResultOut],
+    include_in_schema=False,
+)
+router.add_api_route(
+    "/admin/results/{attempt_id}",
+    get_result_detail,
+    methods=["GET"],
+    response_model=AttemptDetailOut,
+    include_in_schema=False,
+)

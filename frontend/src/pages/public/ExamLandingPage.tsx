@@ -77,10 +77,10 @@ export const ExamLandingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F8FAFF] flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-bold">جاري تحميل الامتحان...</p>
+          <p className="text-slate-500 font-bold">جاري تحميل الامتحان...</p>
         </div>
       </div>
     );
@@ -88,15 +88,15 @@ export const ExamLandingPage: React.FC = () => {
 
   if (error || !exam) {
     return (
-      <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A] flex flex-col">
+      <div className="min-h-screen bg-[#F8FAFF] flex flex-col">
         <PublicNavbar />
         <div className="flex-1 flex items-center justify-center p-4">
           <Card className="max-w-md w-full text-center py-12">
-            <div className="w-20 h-20 bg-red-50 dark:bg-red-950/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-10 h-10 text-red-500" />
             </div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">الامتحان غير موجود</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{error || 'الرابط غير صحيح أو الامتحان غير متاح'}</p>
+            <h2 className="text-xl font-black text-slate-900 mb-2">الامتحان غير موجود</h2>
+            <p className="text-slate-500 text-sm mb-6">{error || 'الرابط غير صحيح أو الامتحان غير متاح'}</p>
             <Button variant="secondary" onClick={() => window.location.href = '/'}>العودة للرئيسية</Button>
           </Card>
         </div>
@@ -105,7 +105,7 @@ export const ExamLandingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFF] dark:bg-[#070B1A] flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-[#F8FAFF] flex flex-col" dir="rtl">
       <PublicNavbar />
       
       {/* Hero Section */}
@@ -114,17 +114,17 @@ export const ExamLandingPage: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-8 items-start">
             {/* Left - Exam Info */}
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 bg-brand-50 dark:bg-brand-950/50 border border-brand-200/50 dark:border-brand-800/30 rounded-full px-4 py-2 text-sm font-bold text-brand-700 dark:text-brand-300">
+              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200/50 rounded-full px-4 py-2 text-sm font-bold text-brand-700">
                 <Sparkles className="w-4 h-4" />
                 <span>جاهز تعرف جبت كام؟ 👀</span>
               </div>
 
               <div>
-                <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight">
+                <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight">
                   {exam.title}
                 </h1>
                 {exam.description && (
-                  <p className="text-slate-600 dark:text-slate-300 mt-4 text-lg leading-relaxed">
+                  <p className="text-slate-600 mt-4 text-lg leading-relaxed">
                     {exam.description}
                   </p>
                 )}
@@ -133,31 +133,31 @@ export const ExamLandingPage: React.FC = () => {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-3">
                 <Card className="text-center py-4" padding="sm">
-                  <div className="w-10 h-10 bg-brand-50 dark:bg-brand-950/50 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                    <FileQuestion className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                  <div className="w-10 h-10 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                    <FileQuestion className="w-5 h-5 text-brand-600" />
                   </div>
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{exam.questions_count}</p>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">سؤال</p>
+                  <p className="text-2xl font-black text-slate-900">{exam.questions_count}</p>
+                  <p className="text-xs font-bold text-slate-500">سؤال</p>
                 </Card>
                 <Card className="text-center py-4" padding="sm">
-                  <div className="w-10 h-10 bg-amber-50 dark:bg-amber-950/30 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                    <Clock className="w-5 h-5 text-amber-600" />
                   </div>
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{exam.duration_minutes}</p>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">دقيقة</p>
+                  <p className="text-2xl font-black text-slate-900">{exam.duration_minutes}</p>
+                  <p className="text-xs font-bold text-slate-500">دقيقة</p>
                 </Card>
                 <Card className="text-center py-4" padding="sm">
-                  <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                    <Trophy className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                    <Trophy className="w-5 h-5 text-emerald-600" />
                   </div>
-                  <p className="text-2xl font-black text-slate-900 dark:text-white">{exam.total_points}</p>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">درجة</p>
+                  <p className="text-2xl font-black text-slate-900">{exam.total_points}</p>
+                  <p className="text-xs font-bold text-slate-500">درجة</p>
                 </Card>
               </div>
 
               {/* Features */}
               <Card>
-                <h3 className="font-black text-slate-900 dark:text-white mb-4">إيه اللي هيحصل؟</h3>
+                <h3 className="font-black text-slate-900 mb-4">إيه اللي هيحصل؟</h3>
                 <div className="space-y-3">
                   {[
                     'هتدخل اسمك بس، من غير تسجيل ولا إيميل',
@@ -166,10 +166,10 @@ export const ExamLandingPage: React.FC = () => {
                     'هتشوف ترتيبك وسط كل اللي امتحنوا',
                   ].map((item, i) => (
                     <div key={i} className="flex gap-3">
-                      <div className="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-black text-brand-600 dark:text-brand-400">{i + 1}</span>
+                      <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-black text-brand-600">{i + 1}</span>
                       </div>
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{item}</p>
+                      <p className="text-sm font-medium text-slate-700">{item}</p>
                     </div>
                   ))}
                 </div>
@@ -178,18 +178,18 @@ export const ExamLandingPage: React.FC = () => {
 
             {/* Right - Start Form */}
             <div className="lg:sticky lg:top-24">
-              <Card className="border-2 border-brand-100 dark:border-brand-900/50 shadow-brand-lg">
+              <Card className="border-2 border-brand-100 shadow-brand-lg">
                 <div className="text-center mb-8">
                   <div className="w-20 h-20 bg-gradient-to-br from-brand-500 to-brand-600 rounded-[20px] flex items-center justify-center mx-auto mb-4 shadow-brand">
                     <span className="text-3xl">🎯</span>
                   </div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">يلا نبدأ؟</h2>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">اكتب اسمك وابدأ الامتحان حالاً</p>
+                  <h2 className="text-2xl font-black text-slate-900">يلا نبدأ؟</h2>
+                  <p className="text-slate-500 text-sm mt-2">اكتب اسمك وابدأ الامتحان حالاً</p>
                 </div>
 
                 <form onSubmit={handleStart} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-black text-slate-700 dark:text-slate-200 mb-3">
+                    <label className="block text-sm font-black text-slate-700 mb-3">
                       اسمك إيه؟ ✨
                     </label>
                     <input
@@ -197,7 +197,7 @@ export const ExamLandingPage: React.FC = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="مثال: أحمد محمد"
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-lg font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 transition-all"
+                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-5 py-4 text-lg font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 transition-all"
                       autoFocus
                     />
                     {nameError && (
@@ -206,7 +206,7 @@ export const ExamLandingPage: React.FC = () => {
                         {nameError}
                       </p>
                     )}
-                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                    <p className="mt-3 text-xs text-slate-500">
                       الاسم هيظهر في لوحة المتصدرين 🏆
                     </p>
                   </div>
@@ -221,16 +221,16 @@ export const ExamLandingPage: React.FC = () => {
                     {starting ? 'جاري البدء...' : 'ابدأ الامتحان 🚀'}
                   </Button>
 
-                  <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400 pt-2">
+                  <div className="flex items-center justify-center gap-2 text-xs text-slate-500 pt-2">
                     <Users className="w-4 h-4" />
                     <span>انضم لآلاف الطلاب اللي عرفوا جابوا كام</span>
                   </div>
                 </form>
 
-                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                <div className="mt-8 pt-6 border-t border-slate-100">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">الامتحان بواسطة</span>
-                    <div className="flex items-center gap-2 font-black text-brand-700 dark:text-brand-300">
+                    <span className="text-slate-500 font-medium">الامتحان بواسطة</span>
+                    <div className="flex items-center gap-2 font-black text-brand-700">
                       <Logo size="sm" showText={false} />
                       <span>جبت كام؟</span>
                     </div>
@@ -239,7 +239,7 @@ export const ExamLandingPage: React.FC = () => {
               </Card>
 
               {/* Trust badges */}
-              <div className="mt-4 flex items-center justify-center gap-6 text-xs text-slate-400 dark:text-slate-500">
+              <div className="mt-4 flex items-center justify-center gap-6 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                   آمن 100%
@@ -255,8 +255,8 @@ export const ExamLandingPage: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 py-6 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
+      <footer className="border-t border-slate-200 py-6 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500">
           <div className="flex items-center gap-2">
             <Logo size="sm" showText={false} />
             <span className="font-bold">جبت كام؟ - امتحن، اعرف نتيجتك، وشوف ترتيبك</span>

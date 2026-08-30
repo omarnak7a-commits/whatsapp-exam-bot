@@ -37,15 +37,14 @@ def upgrade() -> None:
         'students',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=255), nullable=False),
-        sa.Column('whatsapp_number', sa.String(length=50), nullable=False),
+        sa.Column('whatsapp_number', sa.String(length=50), nullable=True),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default='1'),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('whatsapp_number')
+        sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_students_id'), 'students', ['id'], unique=False)
-    op.create_index(op.f('ix_students_whatsapp_number'), 'students', ['whatsapp_number'], unique=True)
+    op.create_index(op.f('ix_students_whatsapp_number'), 'students', ['whatsapp_number'], unique=False)
 
     op.create_table(
         'exams',
@@ -126,6 +125,7 @@ def upgrade() -> None:
         sa.Column('attempt_id', sa.Integer(), nullable=False),
         sa.Column('question_id', sa.Integer(), nullable=False),
         sa.Column('selected_option_id', sa.Integer(), nullable=False),
+        sa.Column('option_id', sa.Integer(), nullable=True),
         sa.Column('is_correct', sa.Boolean(), nullable=False, server_default='0'),
         sa.Column('answered_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['attempt_id'], ['exam_attempts.id'], ondelete='CASCADE'),

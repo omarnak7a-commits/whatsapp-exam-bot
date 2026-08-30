@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -21,6 +21,7 @@ class Question(Base):
 
     order_index = Column(Integer, default=0, nullable=False)
     points = Column(Integer, default=1, nullable=False)
+    question_type = Column(String(20), default="multiple_choice", nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)

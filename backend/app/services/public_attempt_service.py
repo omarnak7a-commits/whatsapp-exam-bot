@@ -241,10 +241,11 @@ class PublicAttemptService:
 
         now = _utcnow()
         if existing:
-            existing.option_id = option_id
-            existing.selected_option_id = option_id
-            existing.answered_at = now
-            # is_correct will be calculated on submit
+            # Answers are final - duplicate submissions are rejected.
+            raise HTTPException(
+                status_code=409,
+                detail="تمت الإجابة على هذا السؤال بالفعل",
+            )
         else:
             new_ans = AttemptAnswer(
                 attempt_id=attempt_id,

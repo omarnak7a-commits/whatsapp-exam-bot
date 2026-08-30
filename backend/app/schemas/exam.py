@@ -11,6 +11,9 @@ class ExamBase(BaseModel):
     duration_minutes: int = 20
     # Legacy support
     duration_seconds: Optional[int] = None
+    instant_feedback_enabled: bool = False
+    show_correct_answers: bool = True
+    leaderboard_enabled: bool = True
 
 
 class ExamCreate(ExamBase):
@@ -23,6 +26,9 @@ class ExamUpdate(BaseModel):
     duration_minutes: Optional[int] = None
     duration_seconds: Optional[int] = None
     status: Optional[ExamStatus] = None
+    instant_feedback_enabled: Optional[bool] = None
+    show_correct_answers: Optional[bool] = None
+    leaderboard_enabled: Optional[bool] = None
 
 
 class ExamOut(BaseModel):
@@ -35,6 +41,9 @@ class ExamOut(BaseModel):
     duration_minutes: int
     duration_seconds: int
     status: ExamStatus
+    instant_feedback_enabled: bool = False
+    show_correct_answers: bool = True
+    leaderboard_enabled: bool = True
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime] = None

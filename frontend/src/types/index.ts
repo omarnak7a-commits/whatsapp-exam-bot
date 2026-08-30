@@ -24,6 +24,7 @@ export interface Question {
   text: string;
   order_index: number;
   points: number;
+  question_type?: 'multiple_choice' | 'true_false';
   created_at: string;
   options: Option[];
 }
@@ -36,6 +37,9 @@ export interface Exam {
   duration_minutes: number;
   duration_seconds: number;
   status: ExamStatus;
+  instant_feedback_enabled: boolean;
+  show_correct_answers: boolean;
+  leaderboard_enabled: boolean;
   created_at: string;
   updated_at: string;
   published_at?: string;

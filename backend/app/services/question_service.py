@@ -25,6 +25,11 @@ class QuestionService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="يجب إضافة خيارين على الأقل لكل سؤال",
             )
+        if len(data.options) > 4:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="الحد الأقصى للاختيارات هو 4",
+            )
 
         correct_count = sum(1 for opt in data.options if opt.is_correct)
         if correct_count != 1:
@@ -46,6 +51,7 @@ class QuestionService:
             question_text=data.text,
             order_index=order_idx,
             points=data.points or 1,
+            question_type=data.question_type or "multiple_choice",
         )
         question = await self.repo.create(question)
 
@@ -76,8 +82,15 @@ class QuestionService:
             question.order_index = data.order_index
         if data.points is not None:
             question.points = data.points
+        if data.question_type is not None and data.question_type in {"multiple_choice", "true_false"}:
+            question.question_type = data.question_type
 
         if data.options is not None:
+            if len(data.options) > 4:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="الحد الأقصى للاختيارات هو 4",
+                )
             if len(data.options) < 2:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -129,6 +142,7 @@ class QuestionService:
             question_text=question.text or question.question_text,
             order_index=question.order_index + 1,
             points=question.points,
+            question_type=getattr(question, "question_type", "multiple_choice") or "multiple_choice",
         )
         self.db.add(new_q)
         await self.db.flush()
