@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { ArrowRight, Plus, Trash2, CheckCircle2, Save, GripVertical, Copy, Eye, Share2, Link2, Clock, FileText, Users, Settings, AlertCircle } from 'lucide-react';
+import { examLink, copyExamLink } from '../utils/examLink';
 
 interface Option {
   id?: number;
@@ -58,6 +59,7 @@ export const ExamEditorPage: React.FC = () => {
   ]);
   const [formError, setFormError] = useState<string | null>(null);
   const [savingQuestion, setSavingQuestion] = useState(false);
+  const [justPublished, setJustPublished] = useState(false);
 
   const fetchExam = async () => {
     setLoading(true);
@@ -172,7 +174,11 @@ export const ExamEditorPage: React.FC = () => {
   const handlePublish = async () => {
     try {
       await apiFetch(`/exams/${examId}/publish`, { method: 'POST' });
-      fetchExam();
+      const fresh = await apiFetch<ExamDetail>(`/exams/${examId}`);
+      setExam(fresh);
+      // Reveal the share tab immediately so the real link shows up
+      setActiveTab('share');
+      setJustPublished(true);
     } catch (err: any) {
       alert(err.message);
     }
@@ -189,9 +195,7 @@ export const ExamEditorPage: React.FC = () => {
 
   const copyLink = () => {
     if (!exam?.public_slug) return;
-    const url = `${window.location.origin}/exam/${exam.public_slug}`;
-    navigator.clipboard.writeText(url);
-    alert('تم نسخ الرابط! 📋');
+    copyExamLink(exam.public_slug);
   };
 
   if (loading) {
@@ -263,7 +267,10 @@ export const ExamEditorPage: React.FC = () => {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                if (tab.id !== 'share') setJustPublished(false);
+              }}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
                 activeTab === tab.id
                   ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
@@ -425,23 +432,40 @@ export const ExamEditorPage: React.FC = () => {
             </Card>
           ) : (
             <>
+              {justPublished && (
+                <div className="flex items-start gap-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl p-4">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-black text-emerald-800 dark:text-emerald-300 text-sm">تم نشر الامتحان! 🎉</p>
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+                      الرابط اللي تحت شغال دلوقتي — انسخه وشاركه مع الطلاب في الواتساب
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <Card className="border-2 border-brand-100 dark:border-brand-900/50">
                 <h3 className="font-black text-slate-900 dark:text-white text-lg mb-2 flex items-center gap-2">
                   <Link2 className="w-5 h-5 text-brand-600" />
                   رابط الامتحان
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">شارك الرابط ده مع الطلاب عشان يبدأوا الامتحان</p>
-                
-                <div className="bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex items-center gap-3">
+
+                <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-slate-500 dark:text-slate-400 tracking-wide">رابط الامتحان العام</p>
-                    <p className="font-mono text-sm font-bold text-slate-900 dark:text-white truncate mt-1" dir="ltr">
-                      {window.location.origin}/exam/{exam.public_slug}
-                    </p>
+                    <p className="text-xs font-black text-slate-500 dark:text-slate-400 tracking-wide mb-1">رابط الامتحان العام (لينك حقيقي جاهز)</p>
+                    <input
+                      type="text"
+                      readOnly
+                      dir="ltr"
+                      value={examLink(exam.public_slug) || ''}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 font-mono text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 select-all"
+                    />
                   </div>
-                  <Button onClick={copyLink} size="sm">
+                  <Button onClick={copyLink} size="sm" className="sm:self-end sm:shrink-0">
                     <Copy className="w-4 h-4 ml-2" />
-                    نسخ
+                    نسخ الرابط
                   </Button>
                 </div>
 

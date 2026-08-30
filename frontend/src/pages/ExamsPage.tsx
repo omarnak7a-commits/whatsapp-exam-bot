@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { FileText, Plus, Clock, Users, Eye, Edit, Trash2, Share2, Copy, MoreVertical, Search, Filter } from 'lucide-react';
+import { examLink, copyExamLink } from '../utils/examLink';
 
 interface Exam {
   id: number;
@@ -71,9 +72,7 @@ export const ExamsPage: React.FC = () => {
 
   const copyLink = (slug?: string) => {
     if (!slug) return;
-    const url = `${window.location.origin}/exam/${slug}`;
-    navigator.clipboard.writeText(url);
-    alert('تم نسخ الرابط! 📋');
+    copyExamLink(slug);
   };
 
   const filteredExams = exams.filter(exam => {
@@ -218,14 +217,18 @@ export const ExamsPage: React.FC = () => {
 
                 {exam.public_slug && exam.status === 'PUBLISHED' && (
                   <div className="mt-4 p-3 bg-brand-50 dark:bg-brand-950/30 border border-brand-200/50 dark:border-brand-800/30 rounded-2xl">
-                    <p className="text-[11px] font-black text-brand-700 dark:text-brand-300 tracking-wide">رابط الامتحان</p>
+                    <p className="text-[11px] font-black text-brand-700 dark:text-brand-300 tracking-wide">رابط الامتحان (لينك حقيقي)</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="text-xs font-mono text-brand-600 dark:text-brand-400 truncate flex-1" dir="ltr">
-                        /exam/{exam.public_slug}
+                      <p
+                        className="text-xs font-mono text-brand-600 dark:text-brand-400 truncate flex-1"
+                        dir="ltr"
+                        title={examLink(exam.public_slug) || undefined}
+                      >
+                        {examLink(exam.public_slug)}
                       </p>
                       <button
                         onClick={() => copyLink(exam.public_slug)}
-                        className="text-[11px] font-black bg-brand-600 text-white px-3 py-1 rounded-full hover:bg-brand-700 transition-colors"
+                        className="text-[11px] font-black bg-brand-600 text-white px-3 py-1 rounded-full hover:bg-brand-700 transition-colors flex-shrink-0"
                       >
                         نسخ
                       </button>
