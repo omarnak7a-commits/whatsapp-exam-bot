@@ -1,11 +1,14 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import text
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.api.routes import auth, exams, questions, students, results, public
@@ -40,13 +43,15 @@ else:
 # Columns that were added by the ORM models but may be missing on databases that
 # were created before the web-platform schema evolved (e.g. the live Vercel DB).
 # Each fix is idempotent and isolated so a single failure never blocks startup.
+# NOTE: default expressions must be valid on BOTH PostgreSQL and SQLite
+# (PostgreSQL rejects `DEFAULT 0` for BOOLEAN columns - use TRUE/FALSE).
 SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
     "exams": [
         ("public_slug", "VARCHAR(100)", None),
         ("duration_minutes", "INTEGER", "20"),
-        ("instant_feedback_enabled", "BOOLEAN", "0"),
-        ("show_correct_answers", "BOOLEAN", "1"),
-        ("leaderboard_enabled", "BOOLEAN", "1"),
+        ("instant_feedback_enabled", "BOOLEAN", "FALSE"),
+        ("show_correct_answers", "BOOLEAN", "TRUE"),
+        ("leaderboard_enabled", "BOOLEAN", "TRUE"),
     ],
     "questions": [
         ("text", "TEXT", None),
@@ -108,6 +113,7 @@ async def _apply_schema_fixes(conn) -> None:
                 )
             try:
                 await conn.execute(text(stmt))
+                logger.info("Schema fix applied: %s.%s", table, column)
             except Exception as e:  # noqa: BLE001
                 # Column already exists, DB flavour quirk, or permission issue.
                 logger.warning(
@@ -115,19 +121,56 @@ async def _apply_schema_fixes(conn) -> None:
                 )
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+async def _ensure_schema_on_conn(conn) -> None:
+    await conn.run_sync(Base.metadata.create_all)
+    await _apply_schema_fixes(conn)
+
+
+# ---------------------------------------------------------------------------
+# Serverless-safe schema bootstrap.
+#
+# Vercel's Python runtime does NOT run FastAPI `lifespan` events, so on
+# production the old lifespan-only bootstrap never executed and the live
+# database stayed behind the ORM models (missing columns -> 500 on writes).
+# `ensure_schema_ready()` also runs once per process on the first HTTP
+# request (cold start), which covers serverless runtimes.
+# ---------------------------------------------------------------------------
+_schema_state = {"done": False, "attempted": False}
+_schema_lock: asyncio.Lock | None = None
+
+
+async def ensure_schema_ready() -> None:
+    global _schema_lock
+    if _schema_state["done"]:
+        return
+    if _schema_lock is None:
+        _schema_lock = asyncio.Lock()
+    async with _schema_lock:
+        if _schema_state["done"] or _schema_state["attempted"]:
+            return
+        _schema_state["attempted"] = True
+        try:
+            async with engine.begin() as conn:
+                await _ensure_schema_on_conn(conn)
+            _schema_state["done"] = True
+            logger.info("Schema ensured (tables + missing columns)")
+        except Exception as e:  # noqa: BLE001
+            # Keep the app serving; the real error stays in the logs.
+            logger.error("Schema ensure failed: %r", e)
+
+
+async def _seed_admin() -> None:
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            # Patch up any columns missing from older databases.
-            await _apply_schema_fixes(conn)
-        # Auto-seed default admin (idempotent, ADMIN_* env driven).
-        # Makes the first login work out-of-the-box on fresh databases (e.g. Vercel).
         admin = await ensure_admin_seeded()
         logger.info("Admin ready: %s", admin.email)
-    except Exception as e:
-        logger.warning(f"DB init/seed skipped: {e}")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Admin seed skipped: %r", e)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await ensure_schema_ready()
+    await _seed_admin()
     yield
 
 
@@ -148,6 +191,56 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def serverless_bootstrap_middleware(request: Request, call_next):
+    """Run the DB bootstrap once per process on first request.
+
+    Required because serverless platforms (Vercel) never fire lifespan events.
+    After the first request this is a single boolean check.
+    """
+    if not _schema_state["done"] and request.url.path.startswith("/api/"):
+        await ensure_schema_ready()
+    return await call_next(request)
+
+
+# ---------------------------------------------------------------------------
+# Error handling: keep friendly Arabic details for clients, log the real
+# exception server-side so production logs show the true cause.
+# ---------------------------------------------------------------------------
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code >= 500:
+        logger.error("HTTP %s on %s %s: %r", exc.status_code, request.method, request.url.path, exc.detail)
+    detail = exc.detail
+    if not isinstance(detail, str):
+        detail = "حدث خطأ، حاول مرة أخرى"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": detail},
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "تحقق من صحة البيانات المدخلة"},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Full traceback in server logs; generic friendly message for clients.
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "حدث خطأ، حاول مرة أخرى"},
+    )
+
 
 # Register API Routers
 app.include_router(auth.router, prefix=settings.API_V1_STR)
