@@ -122,10 +122,15 @@ cp .env.example .env
 # DATABASE_URL=sqlite+aiosqlite:///./jebt_kam.db
 
 alembic upgrade head
+# اختياري الآن: الـ admin بيتعمّل تلقائياً عند تشغيل السيرفر (auto-seed)
 python app/seed.py
 
 uvicorn app.main:app --reload --port 8000
 ```
+
+> **Auto-seed:** عند تشغيل `app.main` يتم إنشاء الجداول تلقائياً + عمل `seed` للـ admin الافتراضي
+> (`ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` من البيئة أو القيم الافتراضية `admin@exam.com / admin123`).
+> العملية idempotent — تنفيذها أكثر من مرة لا يكرر الأدمن، وينفع تنشأ في نفس اللحظة من أكثر من cold start.
 
 Backend: `http://localhost:8000`
 Docs: `http://localhost:8000/api/docs`
@@ -166,9 +171,10 @@ Services:
 - **Email:** `admin@exam.com`
 - **Password:** `admin123`
 
-يمكن تغييرها عبر متغيرات البيئة `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+يتم إنشاء الأدمن تلقائياً (auto-seed) عند أول تشغيل للسيرفر وأول محاولة login — مش محتاج تعمل حاجة يدوياً.
+يمكن تغييرها عبر متغيرات البيئة `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`
 
-لإنشاء أدمن جديد:
+لإنشاء أدمن يدوياً (اختياري):
 ```bash
 cd backend
 ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=StrongPass123 python app/seed.py
@@ -324,15 +330,23 @@ PYTHONPATH=. pytest -v
 
 ### Backend
 - Compatible with Render, Railway, Fly.io, Vercel (via api/index.py)
-- Set `DATABASE_URL` (Postgres)
+- Set `DATABASE_URL` (Postgres — على Vercel استخدم Neon / Supabase / Vercel Postgres)
 - Set `SECRET_KEY`
-- Run `alembic upgrade head`
-- Run `python app/seed.py`
+- `alembic upgrade head` اختياري — الجداول بتتعمل تلقائياً عند startup
+- `python app/seed.py` اختياري — الأدمن بيتعمل-seed تلقائياً عند startup وأول login
 
 ### Frontend
 - Vercel, Netlify, Cloudflare Pages
 - `npm run build` → `dist/`
 - Env: `VITE_API_URL` (optional, defaults to /api proxy)
+
+### Vercel (ملف `vercel.json` موجود جاهز)
+- `vercel.json` بيعمل build للفرونت (`frontend/dist`) ويعرفه كـ static output، وفي نفس الوقت
+  بيصرّح بـ `api/index.py` كـ Vercel Function (Python/FastAPI) ليه `/api/*`.
+- مهم: `frontend/dist` **متعمّد يتبعت في Git** لأن Vercel's FastAPI preset بيروت كل الطلبات للـ function —
+  فالـ SPA لازم يكون داخل الـ function bundle (`excludeFiles` في `vercel.json` بيبعد node_modules والـ tests بس).
+- متغيرات البيئة المطلوبة في Vercel: `DATABASE_URL`, `SECRET_KEY`, ولو عايز تغيّر الأدمن:
+  `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`.
 
 ### Docker Production
 ```bash

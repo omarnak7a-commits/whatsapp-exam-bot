@@ -1,4 +1,5 @@
 const API_BASE_URL = '/api';
+const LOGIN_ENDPOINT = '/auth/login';
 
 export async function apiFetch<T>(
   endpoint: string,
@@ -20,13 +21,38 @@ export async function apiFetch<T>(
   });
 
   if (response.status === 401) {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('admin_name');
-    localStorage.removeItem('admin_email');
-    if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/exam/')) {
-      window.location.href = '/admin/login';
+    const isLoginRequest = endpoint === LOGIN_ENDPOINT;
+
+    // Try to read the server's error detail first so real errors
+    // (e.g. wrong credentials on the login page) are shown as-is.
+    let serverDetail: string | null = null;
+    try {
+      const errData = await response.json();
+      if (errData && typeof errData.detail === 'string') {
+        serverDetail = errData.detail;
+      }
+    } catch {
+      // Non-JSON body (proxy/network error page) — keep the default messages.
     }
-    throw new Error('جلسة العمل انتهت، يرجى إعادة التسجيل');
+
+    // True session expiry: an authenticated request returned 401.
+    if (!isLoginRequest && token) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('admin_name');
+      localStorage.removeItem('admin_email');
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/exam/')) {
+        window.location.href = '/admin/login';
+      }
+      throw new Error(serverDetail || 'جلسة العمل انتهت، يرجى إعادة التسجيل');
+    }
+
+    // Login failures must never be shown as "session expired".
+    throw new Error(
+      serverDetail ||
+      (isLoginRequest
+        ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+        : 'حدث خطأ في النظام')
+    );
   }
 
   if (!response.ok) {
