@@ -11,17 +11,19 @@ export interface AdminUser {
 }
 
 export interface Option {
-  id?: number;
-  option_text: string;
+  id: number;
+  question_id?: number;
+  text: string;
   is_correct: boolean;
-  order_index?: number;
+  order_index: number;
 }
 
 export interface Question {
   id: number;
   exam_id: number;
-  question_text: string;
+  text: string;
   order_index: number;
+  points: number;
   created_at: string;
   options: Option[];
 }
@@ -30,13 +32,10 @@ export interface Exam {
   id: number;
   title: string;
   description?: string;
+  public_slug?: string;
+  duration_minutes: number;
   duration_seconds: number;
   status: ExamStatus;
-  number_of_questions: number;
-  randomize_questions: boolean;
-  randomize_options: boolean;
-  one_attempt_only: boolean;
-  show_correct_answer_immediately: boolean;
   created_at: string;
   updated_at: string;
   published_at?: string;
@@ -52,12 +51,11 @@ export interface ExamDetail extends Exam {
 export interface Student {
   id: number;
   name: string;
-  whatsapp_number: string;
-  is_active: boolean;
-  created_at: string;
-  total_attempts?: number;
-  average_score?: number;
-  best_score?: number;
+  total_attempts: number;
+  average_percentage: number;
+  best_percentage: number;
+  exams_count: number;
+  last_attempt_at?: string;
 }
 
 export interface AttemptResult {
@@ -66,29 +64,26 @@ export interface AttemptResult {
   exam_title: string;
   student_id: number;
   student_name: string;
-  student_whatsapp: string;
   started_at: string;
+  submitted_at?: string;
   finished_at?: string;
   expires_at: string;
   status: AttemptStatus;
   score: number;
-  total_questions: number;
-  correct_answers: number;
-  wrong_answers: number;
+  total_score: number;
   percentage: number;
-  completion_seconds: number;
-  final_rank?: number;
+  completion_time_seconds: number;
+  ranking?: number;
 }
 
 export interface LeaderboardEntry {
   rank: number;
   student_name: string;
-  whatsapp_number: string;
   score: number;
-  total_questions: number;
+  total_score: number;
   percentage: number;
-  completion_seconds: number;
-  finished_at: string;
+  completion_time_seconds: number;
+  submitted_at?: string;
 }
 
 export interface DashboardStats {

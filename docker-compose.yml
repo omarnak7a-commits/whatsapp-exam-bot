@@ -3,12 +3,12 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: whatsapp_exam_postgres
+    container_name: jebt_kam_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: whatsapp_exam_db
+      POSTGRES_DB: jebt_kam_db
     ports:
       - "5432:5432"
     volumes:
@@ -23,33 +23,39 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: whatsapp_exam_backend
+    container_name: jebt_kam_backend
     restart: always
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/whatsapp_exam_db
-      SECRET_KEY: super_secret_jwt_key_for_whatsapp_exam_platform_change_in_prod
-      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-MOCK_TOKEN}
-      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-MOCK_PHONE_ID}
-      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-my_verify_token_123}
-      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v19.0}
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/jebt_kam_db
+      SECRET_KEY: super_secret_jwt_key_for_jebt_kam_platform_change_in_prod_2026
+      JWT_SECRET: super_secret_jwt_key_for_jebt_kam_platform_change_in_prod_2026
+      ACCESS_TOKEN_EXPIRE_MINUTES: 10080
+      APP_ENV: development
+      BACKEND_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:5173
+      ADMIN_EMAIL: admin@exam.com
+      ADMIN_PASSWORD: admin123
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
     command: >
-      sh -c "alembic upgrade head && python seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      sh -c "alembic upgrade head && python app/seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: whatsapp_exam_frontend
+    container_name: jebt_kam_frontend
     restart: always
     ports:
       - "80:80"
+      - "5173:80"
     depends_on:
       - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
 
 volumes:
   postgres_data:

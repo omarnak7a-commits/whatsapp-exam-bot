@@ -1,20 +1,19 @@
 import os
-from typing import List, Union
-from pydantic import AnyHttpUrl
+from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "WhatsApp Exam Bot"
+    PROJECT_NAME: str = "جبت كام؟"
     API_V1_STR: str = "/api"
-    SECRET_KEY: str = "supersecretkey_change_me_in_production_123456789"
+    SECRET_KEY: str = "super_secret_jwt_key_for_jebt_kam_platform_change_in_prod"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./whatsapp_exam.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./jebt_kam.db"
 
-    # WhatsApp Meta Cloud API Settings
+    # Legacy WhatsApp - kept for backward compat but not used in web flow
     WHATSAPP_ACCESS_TOKEN: str = "MOCK_TOKEN"
     WHATSAPP_PHONE_NUMBER_ID: str = "MOCK_PHONE_ID"
     WHATSAPP_VERIFY_TOKEN: str = "MOCK_VERIFY_TOKEN"
@@ -27,13 +26,22 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://localhost:80",
+        "http://localhost",
     ]
+
+    APP_ENV: str = "development"
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",
         extra="ignore",
     )
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV.lower() == "production"
 
 
 settings = Settings()

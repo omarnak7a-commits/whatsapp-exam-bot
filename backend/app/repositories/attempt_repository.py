@@ -113,8 +113,8 @@ class AttemptRepository:
             )
             .order_by(
                 ExamAttempt.score.desc(),
-                ExamAttempt.completion_seconds.asc(),
-                ExamAttempt.finished_at.asc(),
+                ExamAttempt.completion_time_seconds.asc(),
+                ExamAttempt.submitted_at.asc(),
             )
         )
         result = await self.db.execute(query)

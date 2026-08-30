@@ -1,17 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../api/client';
-import { DashboardStats } from '../types';
-import { FileText, CheckCircle, Users, Award, Percent, Trophy, RefreshCw } from 'lucide-react';
+import { Card, StatsCard } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { FileText, CheckCircle, Users, Award, Percent, Trophy, RefreshCw, TrendingUp, Clock, Eye, ArrowUpRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface DashboardStats {
+  total_exams: number;
+  published_exams: number;
+  total_students: number;
+  total_completed_attempts: number;
+  average_score_percentage: number;
+  highest_score_percentage: number;
+}
+
+interface Attempt {
+  id: number;
+  exam_title: string;
+  student_name: string;
+  score: number;
+  total_score: number;
+  percentage: number;
+  status: string;
+  started_at: string;
+}
 
 export const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentAttempts, setRecentAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch<DashboardStats>('/dashboard/stats');
-      setStats(data);
+      const [statsData, attemptsData] = await Promise.all([
+        apiFetch<DashboardStats>('/dashboard/stats'),
+        apiFetch<Attempt[]>('/dashboard/recent-attempts?limit=8'),
+      ]);
+      setStats(statsData);
+      setRecentAttempts(attemptsData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -20,86 +48,170 @@ export const DashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchStats();
+    fetchData();
   }, []);
 
   const cards = [
     {
       title: 'إجمالي الامتحانات',
       value: stats?.total_exams ?? 0,
-      icon: FileText,
-      color: 'from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/30',
+      icon: <FileText className="w-6 h-6" />,
+      color: 'brand' as const,
+      trend: `${stats?.published_exams ?? 0} منشور`,
     },
     {
-      title: 'الامتحانات النشطة (المنشورة)',
-      value: stats?.published_exams ?? 0,
-      icon: CheckCircle,
-      color: 'from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/30',
-    },
-    {
-      title: 'إجمالي الطلاب المسجلين',
+      title: 'الطلاب المشاركين',
       value: stats?.total_students ?? 0,
-      icon: Users,
-      color: 'from-purple-500/20 to-purple-600/5 text-purple-400 border-purple-500/30',
+      icon: <Users className="w-6 h-6" />,
+      color: 'purple' as const,
+      trend: 'طالب مسجل',
     },
     {
       title: 'المحاولات المكتملة',
       value: stats?.total_completed_attempts ?? 0,
-      icon: Award,
-      color: 'from-amber-500/20 to-amber-600/5 text-amber-400 border-amber-500/30',
+      icon: <Award className="w-6 h-6" />,
+      color: 'emerald' as const,
+      trend: 'محاولة مكتملة',
     },
     {
-      title: 'متوسط درجات الطلاب',
+      title: 'متوسط النتائج',
       value: `${stats?.average_score_percentage ?? 0}%`,
-      icon: Percent,
-      color: 'from-cyan-500/20 to-cyan-600/5 text-cyan-400 border-cyan-500/30',
-    },
-    {
-      title: 'أعلى نسبة محققة',
-      value: `${stats?.highest_score_percentage ?? 0}%`,
-      icon: Trophy,
-      color: 'from-rose-500/20 to-rose-600/5 text-rose-400 border-rose-500/30',
+      icon: <Percent className="w-6 h-6" />,
+      color: 'amber' as const,
+      trend: `أعلى نتيجة ${stats?.highest_score_percentage ?? 0}%`,
     },
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">نظرة عامة على الإحصائيات</h2>
-          <p className="text-slate-400 text-sm mt-1">ملخص أداء الامتحانات وتفاعلات الطلاب عبر واتساب</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white">أهلاً بيك! 👋</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">ده ملخص أداء منصتك النهاردة</p>
         </div>
-        <button
-          onClick={fetchStats}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl text-sm transition"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          <span>تحديث الإحصائيات</span>
-        </button>
+        <Button variant="secondary" onClick={fetchData} disabled={loading}>
+          <RefreshCw className={`w-4 h-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+          تحديث
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={idx}
-              className={`bg-gradient-to-br ${card.color} border rounded-2xl p-6 relative overflow-hidden backdrop-blur-sm`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-400">{card.title}</p>
-                  <h3 className="text-3xl font-extrabold text-white mt-2">
-                    {loading ? '...' : card.value}
-                  </h3>
-                </div>
-                <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-700/50">
-                  <Icon className="w-6 h-6" />
-                </div>
-              </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {cards.map((card, idx) => (
+          <StatsCard
+            key={idx}
+            title={card.title}
+            value={loading ? '...' : card.value}
+            icon={card.icon}
+            color={card.color}
+            trend={card.trend}
+          />
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Recent Attempts */}
+        <Card className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-black text-slate-900 dark:text-white text-lg flex items-center gap-2">
+              <Clock className="w-5 h-5 text-brand-600" />
+              آخر المحاولات
+            </h3>
+            <Link to="/admin/results">
+              <Button variant="ghost" size="sm">
+                عرض الكل
+                <ArrowUpRight className="w-4 h-4 mr-1" />
+              </Button>
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
+              ))}
             </div>
-          );
-        })}
+          ) : recentAttempts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Award className="w-8 h-8 text-slate-400" />
+              </div>
+              <p className="font-bold text-slate-600 dark:text-slate-400">لسه مفيش محاولات</p>
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">أول ما الطلاب يبدأوا يمتحنوا هتظهر هنا</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentAttempts.map((attempt) => (
+                <div key={attempt.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 hover:border-slate-200 dark:hover:border-slate-600 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-black text-sm">
+                      {attempt.student_name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm">{attempt.student_name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{attempt.exam_title}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-left">
+                      <p className="font-black text-slate-900 dark:text-white text-sm">{attempt.score}/{attempt.total_score}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{attempt.percentage}%</p>
+                    </div>
+                    <Badge variant={attempt.status === 'COMPLETED' ? 'success' : 'warning'} size="sm">
+                      {attempt.status === 'COMPLETED' ? 'مكتمل' : attempt.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Quick Actions & Info */}
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-br from-brand-600 to-brand-700 text-white border-0 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-accent-500/20 rounded-full blur-2xl" />
+            
+            <div className="relative">
+              <div className="w-12 h-12 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center mb-4">
+                <Trophy className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-black text-xl mb-2">جاهز تبدأ؟</h3>
+              <p className="text-brand-100 text-sm leading-relaxed mb-6">
+                أنشئ أول امتحان ليك وشارك الرابط مع الطلاب. هتشوف النتائج لحظياً!
+              </p>
+              <Link to="/admin/exams/new">
+                <Button variant="secondary" className="bg-white text-brand-700 hover:bg-brand-50 border-0 font-black">
+                  إنشاء امتحان جديد
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
+              نصائح سريعة
+            </h3>
+            <div className="space-y-3 text-sm">
+              {[
+                'استخدم عناوين واضحة وجذابة للامتحانات',
+                'خلي مدة الامتحان مناسبة لعدد الأسئلة',
+                'شارك رابط الامتحان في جروبات الطلاب',
+                'تابع لوحة المتصدرين لتحفيز الطلاب',
+              ].map((tip, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className="w-6 h-6 rounded-full bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xs font-black flex-shrink-0">
+                    {i + 1}
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">{tip}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

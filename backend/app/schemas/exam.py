@@ -8,12 +8,9 @@ from app.schemas.question import QuestionOut
 class ExamBase(BaseModel):
     title: str
     description: Optional[str] = None
-    duration_seconds: int = 1200
-    number_of_questions: int = 10
-    randomize_questions: bool = True
-    randomize_options: bool = True
-    one_attempt_only: bool = True
-    show_correct_answer_immediately: bool = True
+    duration_minutes: int = 20
+    # Legacy support
+    duration_seconds: Optional[int] = None
 
 
 class ExamCreate(ExamBase):
@@ -23,18 +20,20 @@ class ExamCreate(ExamBase):
 class ExamUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    duration_minutes: Optional[int] = None
     duration_seconds: Optional[int] = None
-    number_of_questions: Optional[int] = None
-    randomize_questions: Optional[bool] = None
-    randomize_options: Optional[bool] = None
-    one_attempt_only: Optional[bool] = None
-    show_correct_answer_immediately: Optional[bool] = None
+    status: Optional[ExamStatus] = None
 
 
-class ExamOut(ExamBase):
+class ExamOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    title: str
+    description: Optional[str] = None
+    public_slug: Optional[str] = None
+    duration_minutes: int
+    duration_seconds: int
     status: ExamStatus
     created_at: datetime
     updated_at: datetime
@@ -46,3 +45,16 @@ class ExamOut(ExamBase):
 
 class ExamDetailOut(ExamOut):
     questions: List[QuestionOut] = []
+
+
+class PublicExamOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: Optional[str] = None
+    public_slug: str
+    duration_minutes: int
+    status: ExamStatus
+    questions_count: int
+    total_points: int

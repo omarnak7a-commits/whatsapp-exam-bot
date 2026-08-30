@@ -21,9 +21,10 @@ export async function apiFetch<T>(
 
   if (response.status === 401) {
     localStorage.removeItem('access_token');
-    localStorage.removeItem('admin_user');
-    if (!window.location.pathname.includes('/login')) {
-      window.location.href = '/login';
+    localStorage.removeItem('admin_name');
+    localStorage.removeItem('admin_email');
+    if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/exam/')) {
+      window.location.href = '/admin/login';
     }
     throw new Error('جلسة العمل انتهت، يرجى إعادة التسجيل');
   }
@@ -41,6 +42,33 @@ export async function apiFetch<T>(
 
   if (response.status === 204) {
     return {} as T;
+  }
+
+  return response.json();
+}
+
+// Public API (no auth required)
+export async function publicFetch<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let errorDetail = 'حدث خطأ';
+    try {
+      const errData = await response.json();
+      errorDetail = errData.detail || errorDetail;
+    } catch {}
+    throw new Error(errorDetail);
   }
 
   return response.json();
