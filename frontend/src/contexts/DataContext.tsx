@@ -93,6 +93,17 @@ export interface AdminAttemptDetail {
 }
 
 /** Public (student-side) shapes — options never carry correctness. */
+/** One row of an exam-specific admin leaderboard. */
+export interface AdminLeaderboardEntry {
+  rank: number
+  studentId: string
+  studentName: string
+  score: number
+  totalScore: number
+  percentage: number
+  completionTimeSeconds: number
+}
+
 export interface PublicExamInfo {
   slug: string
   title: string
@@ -222,6 +233,7 @@ interface DataContextValue {
   // Admin results
   fetchAttemptDetail: (attemptId: string) => Promise<AdminAttemptDetail>
   refreshAttempts: () => Promise<void>
+  fetchExamLeaderboard: (examId: string) => Promise<AdminLeaderboardEntry[]>
 
   // Student flow (public API)
   fetchPublicExam: (slug: string) => Promise<PublicExamInfo>
@@ -796,6 +808,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Admin leaderboard for ONE exam. The server ranks and filters by exam_id,
+  // so results from other exams can never appear here.
+  const fetchExamLeaderboard = useCallback(
+    async (examId: string): Promise<AdminLeaderboardEntry[]> => {
+      const list = await apiFetch<
+        Array<{
+          rank: number
+          student_id: number
+          student_name: string
+          score: number
+          total_score: number
+          percentage: number
+          completion_time_seconds: number
+        }>
+      >(`/exams/${examId}/leaderboard`)
+      return list.map(e => ({
+        rank: e.rank,
+        studentId: String(e.student_id),
+        studentName: e.student_name,
+        score: e.score,
+        totalScore: e.total_score,
+        percentage: e.percentage,
+        completionTimeSeconds: e.completion_time_seconds,
+      }))
+    },
+    []
+  )
+
   const fetchPublicLeaderboard = useCallback(async (slug: string): Promise<PublicResult['leaderboard']> => {
     const list = await publicFetch<
       Array<{
@@ -842,6 +882,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getQuestionsForExam,
         fetchAttemptDetail,
         refreshAttempts,
+        fetchExamLeaderboard,
         fetchPublicExam,
         startAttempt,
         autoSubmitAttempt,
