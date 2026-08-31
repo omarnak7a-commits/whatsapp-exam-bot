@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { useData, PublicExamInfo } from '@/contexts/DataContext'
 import { useNavigate, useParams } from '@/router'
+import { ApiError } from '@/api/client'
 import Logo from '@/components/Logo'
 
 function ErrorCard({ icon, title, message }: { icon: string; title: string; message: string }) {
@@ -28,6 +29,8 @@ export default function ExamStart() {
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [starting, setStarting] = useState(false)
+  // Set when the backend answers 409: this name already used its single attempt.
+  const [blockedMessage, setBlockedMessage] = useState('')
 
   // Fetch the real exam info from the public API.
   useEffect(() => {
@@ -64,9 +67,20 @@ export default function ExamStart() {
       const { attemptId } = await startAttempt(exam!.slug, name.trim())
       navigate(`/exam/${exam!.slug}/take/${attemptId}`)
     } catch (err) {
+      // 409 Conflict = this student name already has an attempt on this exam.
+      // No attempt was created and we must NOT navigate to the exam page.
+      if (err instanceof ApiError && err.status === 409) {
+        setBlockedMessage(err.message || 'لقد دخلت هذا الامتحان من قبل، ولا يُسمح لك بإعادته.')
+        setStarting(false)
+        return
+      }
       setError(err instanceof Error ? err.message : 'تعذر بدء الامتحان، حاول مرة أخرى')
       setStarting(false)
     }
+  }
+
+  if (blockedMessage) {
+    return <ErrorCard icon="🚫" title="لا يمكن بدء الامتحان" message={blockedMessage} />
   }
 
   return (

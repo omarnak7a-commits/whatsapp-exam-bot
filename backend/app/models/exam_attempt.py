@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -20,9 +20,26 @@ class AttemptStatus(str, enum.Enum):
 class ExamAttempt(Base):
     __tablename__ = "exam_attempts"
 
+    # One attempt per student per exam - enforced by the database itself so a
+    # race condition (two concurrent start_attempt requests) cannot create two.
+    __table_args__ = (
+        UniqueConstraint("exam_id", "student_id", name="uq_exam_attempts_exam_student"),
+        # Two concurrent start requests can each create their OWN student row for
+        # the same name (neither sees the other's uncommitted insert), which would
+        # slip past the exam_id+student_id constraint. Keying on the normalized
+        # name closes that race at the database level.
+        UniqueConstraint("exam_id", "student_name_key", name="uq_exam_attempts_exam_name"),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
     exam_id = Column(Integer, ForeignKey("exams.id", ondelete="CASCADE"), nullable=False, index=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Normalized (trimmed + lowercased) student name used to enforce
+    # "one attempt per student name per exam". Nullable so that pre-existing
+    # duplicate rows can keep a NULL key (NULLs never collide in a UNIQUE
+    # index on both PostgreSQL and SQLite) without any data being deleted.
+    student_name_key = Column(String(255), nullable=True, index=True)
 
     started_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     # New canonical

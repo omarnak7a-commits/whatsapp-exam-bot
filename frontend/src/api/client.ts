@@ -79,6 +79,19 @@ export async function apiFetch<T>(
   return response.json();
 }
 
+/**
+ * Error carrying the HTTP status so callers can branch on it
+ * (e.g. 409 Conflict = the student already used their single attempt).
+ */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 // Public API (no auth required)
 export async function publicFetch<T>(
   endpoint: string,
@@ -101,7 +114,7 @@ export async function publicFetch<T>(
       errorDetail = errData.detail || errorDetail;
     } catch {}
     console.error(`[public] ${response.status} ${endpoint}:`, errorDetail);
-    throw new Error(errorDetail);
+    throw new ApiError(errorDetail, response.status);
   }
 
   return response.json();
