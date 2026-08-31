@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useData, PublicAttemptBundle } from '@/contexts/DataContext'
 import { useNavigate, useParams } from '@/router'
 import Logo from '@/components/Logo'
-import ExamWatermark from '@/components/ExamWatermark'
+import ExamBrandTitle from '@/components/ExamBrandTitle'
+import ExamBrandName from '@/components/ExamBrandName'
 
 interface LocalAnswer {
   questionId: string
@@ -248,10 +249,20 @@ export default function ExamTake() {
   const progressPct = Math.round((answeredCount / questions.length) * 100)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="relative min-h-screen bg-gray-50 flex flex-col">
+      {/* Large centered brand mark, behind the exam interface and never
+          interactive, so it cannot block questions or answer buttons. */}
+      <ExamBrandTitle />
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between gap-4">
-        <Logo size="sm" />
+      <div className="relative z-10 bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <Logo size="sm" />
+          {/* Website name for the question-solving interface. Hidden on very
+              small screens where the header row has no room; it also appears
+              under the progress bar on mobile (see below). */}
+          <ExamBrandName className="hidden sm:inline-flex" />
+        </div>
         <div className="flex-1 text-center">
           <p className="text-xs text-gray-500">{exam.title}</p>
           <p className="text-sm font-bold text-gray-700">السؤال {currentIdx + 1} من {questions.length}</p>
@@ -263,7 +274,12 @@ export default function ExamTake() {
       </div>
 
       {/* Progress */}
-      <div className="bg-white px-4 pb-3">
+      <div className="relative z-10 bg-white px-4 pb-3">
+        {/* Mobile placement of the website name: the header row is too narrow
+            on phones, so it sits here instead and never overflows. */}
+        <div className="flex justify-center pb-2 sm:hidden">
+          <ExamBrandName />
+        </div>
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-l from-indigo-600 to-teal-500 rounded-full transition-all duration-500"
@@ -277,19 +293,16 @@ export default function ExamTake() {
       </div>
 
       {error && (
-        <div className="px-4 pt-3">
+        <div className="relative z-10 px-4 pt-3">
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-600 text-center">{error}</div>
         </div>
       )}
 
       {/* Question */}
-      <div className="flex-1 flex items-start justify-center px-4 py-6">
+      <div className="relative z-10 flex-1 flex items-start justify-center px-4 py-6">
         <div className="w-full max-w-xl">
           {question && (
             <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden relative [container-type:inline-size]">
-              {/* Decorative background watermark — non-interactive, behind content */}
-              <ExamWatermark />
-
               <div className="relative z-10 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${isTrueFalse ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-700'}`}>
