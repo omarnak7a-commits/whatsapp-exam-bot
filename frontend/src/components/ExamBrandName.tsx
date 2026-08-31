@@ -4,8 +4,8 @@
  * Website/brand name shown in the header of the question-solving interface:
  * "جبت كام؟ (مس ايه فايز)".
  *
- * This is a normal foreground header element (distinct from the large centered
- * ExamBrandTitle branding). It is rendered as a compact RTL pill that sits in
+ * This is the page-level top-bar element, distinct from the large branding
+ * inside the exam card header (ExamCardHeader). It is a compact RTL pill in
  * the existing header row without covering the timer, the question counter or
  * any control. On small screens the teacher-name part is allowed to shrink and
  * truncate rather than overflow the header.

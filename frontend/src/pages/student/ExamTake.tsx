@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useData, PublicAttemptBundle } from '@/contexts/DataContext'
 import { useNavigate, useParams } from '@/router'
 import Logo from '@/components/Logo'
-import ExamBrandTitle from '@/components/ExamBrandTitle'
 import ExamBrandName from '@/components/ExamBrandName'
+import ExamCardHeader from '@/components/ExamCardHeader'
 
 interface LocalAnswer {
   questionId: string
@@ -249,11 +249,7 @@ export default function ExamTake() {
   const progressPct = Math.round((answeredCount / questions.length) * 100)
 
   return (
-    <div className="relative min-h-screen bg-gray-50 flex flex-col">
-      {/* Large centered brand mark, behind the exam interface and never
-          interactive, so it cannot block questions or answer buttons. */}
-      <ExamBrandTitle />
-
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="relative z-10 bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-2">
@@ -303,6 +299,9 @@ export default function ExamTake() {
         <div className="w-full max-w-xl">
           {question && (
             <div className="bg-white rounded-2xl shadow-md shadow-indigo-50 border border-indigo-50 overflow-hidden relative [container-type:inline-size]">
+              {/* Card header: branding first, then the existing exam title. */}
+              <ExamCardHeader examTitle={exam.title} />
+
               <div className="relative z-10 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${isTrueFalse ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-700'}`}>
