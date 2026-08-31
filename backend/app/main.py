@@ -78,6 +78,9 @@ SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
         ("option_order_json", "TEXT", None),
         # Normalized student name enforcing one attempt per student per exam.
         ("student_name_key", "VARCHAR(255)", None),
+        # Auto-submit-on-exit tracking (exam page delivery + heartbeat).
+        ("load_count", "INTEGER", "0"),
+        ("last_seen_at", "TIMESTAMPTZ", None),
     ],
     "attempt_answers": [
         ("option_id", "INTEGER", None),

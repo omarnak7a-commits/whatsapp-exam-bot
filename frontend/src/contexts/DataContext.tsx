@@ -226,6 +226,8 @@ interface DataContextValue {
   // Student flow (public API)
   fetchPublicExam: (slug: string) => Promise<PublicExamInfo>
   startAttempt: (slug: string, studentName: string) => Promise<{ attemptId: string }>
+  autoSubmitAttempt: (attemptId: string) => Promise<void>
+  sendHeartbeat: (attemptId: string) => Promise<void>
   fetchAttemptBundle: (attemptId: string) => Promise<PublicAttemptBundle>
   submitAnswer: (attemptId: string, questionId: string, optionId: string) => Promise<PublicAnswerResult>
   completeAttempt: (attemptId: string) => Promise<void>
@@ -707,6 +709,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     await publicFetch(`/public/attempts/${attemptId}/complete`, { method: 'POST' })
   }, [])
 
+  // Auto submit when the student leaves the exam page before pressing Submit.
+  // `keepalive` lets the request outlive the page during an unload; sendBeacon
+  // is the fallback for browsers that drop keepalive fetches on tab close.
+  // The backend is idempotent, so a duplicated delivery is harmless.
+  const autoSubmitAttempt = useCallback((attemptId: string) => {
+    const url = `/api/public/attempts/${attemptId}/auto-submit`
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob(['{}'], { type: 'application/json' })
+        if (navigator.sendBeacon(url, blob)) return Promise.resolve()
+      }
+    } catch {
+      // fall through to fetch
+    }
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      keepalive: true,
+    }).then(() => undefined).catch(() => undefined)
+  }, [])
+
+  // Tells the server the exam page is still open. When these stop arriving the
+  // server auto-submits the attempt (closed tab / dead browser backstop).
+  const sendHeartbeat = useCallback(async (attemptId: string) => {
+    try {
+      await publicFetch<{ status: string }>(`/public/attempts/${attemptId}/heartbeat`, {
+        method: 'POST',
+      })
+    } catch {
+      // A failed heartbeat must never interrupt the exam.
+    }
+  }, [])
+
   const fetchPublicResult = useCallback(async (attemptId: string): Promise<PublicResult> => {
     const r = await publicFetch<{
       attempt_id: number
@@ -808,6 +844,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         refreshAttempts,
         fetchPublicExam,
         startAttempt,
+        autoSubmitAttempt,
+        sendHeartbeat,
         fetchAttemptBundle,
         submitAnswer,
         completeAttempt,

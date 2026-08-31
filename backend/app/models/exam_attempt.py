@@ -70,6 +70,16 @@ class ExamAttempt(Base):
     # Legacy
     final_rank = Column(Integer, nullable=True)
 
+    # --- Auto-submit-on-exit support ---------------------------------------
+    # Number of times the exam page loaded this attempt. The exam page may be
+    # delivered ONCE: a second load (refresh, re-opening the link) means the
+    # student left the exam, so the attempt is auto-submitted instead.
+    load_count = Column(Integer, default=0, nullable=False)
+    # Last heartbeat from the exam page. When it goes stale the student is no
+    # longer on the page (tab closed / browser killed) and a lazy sweep
+    # auto-submits the attempt server-side.
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+
     # Persisted order for randomization (optional)
     question_order_json = Column(Text, nullable=True)
     option_order_json = Column(Text, nullable=True)

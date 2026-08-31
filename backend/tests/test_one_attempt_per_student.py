@@ -13,7 +13,9 @@ from sqlalchemy import select
 from app.models.exam_attempt import ExamAttempt, AttemptStatus
 
 
-CONFLICT_MESSAGE = "لقد دخلت هذا الامتحان من قبل، ولا يُسمح بإعادة الامتحان."
+CONFLICT_MESSAGE = (
+    "لقد دخلت هذا الامتحان من قبل، وتم تسجيل محاولتك. لا يُسمح بإعادة الامتحان."
+)
 
 
 async def _make_published_exam(client: AsyncClient, headers: dict) -> tuple[int, str]:

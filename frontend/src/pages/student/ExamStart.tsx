@@ -70,7 +70,10 @@ export default function ExamStart() {
       // 409 Conflict = this student name already has an attempt on this exam.
       // No attempt was created and we must NOT navigate to the exam page.
       if (err instanceof ApiError && err.status === 409) {
-        setBlockedMessage(err.message || 'لقد دخلت هذا الامتحان من قبل، ولا يُسمح لك بإعادته.')
+        setBlockedMessage(
+          err.message ||
+            'لقد دخلت هذا الامتحان من قبل، وتم تسجيل محاولتك. لا يُسمح بإعادة الامتحان.'
+        )
         setStarting(false)
         return
       }

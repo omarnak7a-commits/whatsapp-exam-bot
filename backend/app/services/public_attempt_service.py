@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
@@ -22,12 +22,20 @@ def _utcnow():
 
 
 # Single source of truth for the "one attempt per student per exam" rejection.
-ALREADY_ATTEMPTED_MESSAGE = "لقد دخلت هذا الامتحان من قبل، ولا يُسمح بإعادة الامتحان."
+ALREADY_ATTEMPTED_MESSAGE = (
+    "لقد دخلت هذا الامتحان من قبل، وتم تسجيل محاولتك. لا يُسمح بإعادة الامتحان."
+)
 
 
 def normalize_student_name(name: str) -> str:
     """Normalize a student name for identity purposes: trimmed + lowercased."""
     return " ".join(name.split()).lower()
+
+
+# A student is considered gone from the exam page when no heartbeat arrived
+# within this window. The exam page pings well below it, so a live page is
+# never swept, while a closed tab / dead browser is auto-submitted.
+HEARTBEAT_GRACE_SECONDS = 45
 
 
 def _already_attempted() -> HTTPException:
@@ -87,6 +95,10 @@ class PublicAttemptService:
         if not exam.questions or len(exam.questions) == 0:
             raise HTTPException(status_code=400, detail="الامتحان لا يحتوي على أسئلة")
 
+        # Finalize any attempt on this exam whose page stopped reporting, so a
+        # student who closed the tab is scored and ranked before we answer.
+        await self.sweep_abandoned_attempts(exam.id)
+
         student = await self.get_or_create_student(student_name)
 
         # ------------------------------------------------------------------
@@ -140,6 +152,8 @@ class PublicAttemptService:
             completion_time_seconds=0,
             question_order_json=json.dumps(question_ids),
             option_order_json=json.dumps(option_order_map),
+            load_count=0,
+            last_seen_at=now,
         )
         self.db.add(attempt)
         try:
@@ -358,6 +372,88 @@ class PublicAttemptService:
 
         return attempt
 
+    # ------------------------------------------------------------------
+    # Auto submit on exit
+    # ------------------------------------------------------------------
+
+    async def auto_submit(self, attempt_id: int) -> ExamAttempt:
+        """Finalize an attempt the student left before pressing Submit.
+
+        Scoring is identical to a normal submit (same `submit_attempt` path),
+        so score / percentage / correct / wrong / completion_time_seconds /
+        submitted_at / finished_at are all filled in the same way. Idempotent:
+        an already finished attempt is returned untouched.
+        """
+        attempt = await self.get_attempt(attempt_id)
+        if attempt.status != AttemptStatus.IN_PROGRESS.value:
+            return attempt
+        return await self.submit_attempt(attempt_id)
+
+    async def register_page_load(self, attempt: ExamAttempt) -> ExamAttempt:
+        """Record that the exam page loaded this attempt.
+
+        The exam page is served exactly ONCE per attempt. The first load is the
+        student sitting the exam; any later load means they had left the page
+        (refresh, Back then forward, re-opening the link) and the attempt is
+        auto-submitted. This is the server-side guarantee that does not depend
+        on any browser event firing.
+        """
+        if attempt.status != AttemptStatus.IN_PROGRESS.value:
+            return attempt
+
+        if (attempt.load_count or 0) >= 1:
+            # Second delivery of the exam page: treat as leaving the exam.
+            return await self.submit_attempt(attempt.id)
+
+        attempt.load_count = (attempt.load_count or 0) + 1
+        attempt.last_seen_at = _utcnow()
+        await self.db.flush()
+        return attempt
+
+    async def heartbeat(self, attempt_id: int) -> ExamAttempt:
+        """Mark the attempt as still being taken (page is open)."""
+        attempt = await self.get_attempt(attempt_id)
+        if attempt.status == AttemptStatus.IN_PROGRESS.value:
+            if TimerService.is_expired(attempt.expires_at):
+                return await self._expire_attempt(attempt)
+            attempt.last_seen_at = _utcnow()
+            await self.db.flush()
+        return attempt
+
+    async def sweep_abandoned_attempts(self, exam_id: Optional[int] = None) -> int:
+        """Auto-submit IN_PROGRESS attempts whose page stopped reporting.
+
+        This is the backstop for the cases no browser event can cover reliably
+        (killed tab, crashed browser, lost connectivity, phone locked). It runs
+        lazily from public endpoints, so no scheduler is required.
+        """
+        now = _utcnow()
+        cutoff = now - timedelta(seconds=HEARTBEAT_GRACE_SECONDS)
+
+        query = select(ExamAttempt).where(
+            ExamAttempt.status == AttemptStatus.IN_PROGRESS.value
+        )
+        if exam_id is not None:
+            query = query.where(ExamAttempt.exam_id == exam_id)
+
+        result = await self.db.execute(query)
+        candidates = list(result.scalars().all())
+
+        swept = 0
+        for attempt in candidates:
+            last_seen = attempt.last_seen_at or attempt.started_at
+            if last_seen is not None and last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=timezone.utc)
+            # Expired attempts are handled by the timer rules, not by this sweep.
+            if TimerService.is_expired(attempt.expires_at, now):
+                await self._expire_attempt(attempt)
+                swept += 1
+                continue
+            if last_seen is not None and last_seen < cutoff:
+                await self.submit_attempt(attempt.id)
+                swept += 1
+        return swept
+
     async def get_attempt_result(self, attempt_id: int) -> dict:
         attempt = await self.get_attempt(attempt_id)
 
@@ -431,5 +527,7 @@ class PublicAttemptService:
 
     async def get_public_leaderboard(self, slug: str) -> List[dict]:
         exam = await self.get_public_exam(slug)
+        # Make sure abandoned attempts are scored before the board is read.
+        await self.sweep_abandoned_attempts(exam.id)
         leaderboard = await self.ranking_service.get_leaderboard(exam.id)
         return leaderboard
