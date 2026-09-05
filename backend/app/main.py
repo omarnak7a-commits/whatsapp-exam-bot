@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.api.routes import auth, exams, questions, students, results, public
 from app.db.session import engine, Base
 from app.core.logging import logger
+from app.core import og as og_meta
 from app.db.base import Base as BaseModels  # ensure models are imported
 from app.seed import ensure_admin_seeded
 
@@ -321,11 +322,33 @@ if os.getenv("ENABLE_WHATSAPP", "false").lower() == "true":
     logger.info("WhatsApp webhook route enabled (legacy mode)")
 
 
+def _spa_html_response(request: Request, path: str) -> HTMLResponse:
+    """Serve the SPA shell with server-rendered Open Graph metadata.
+
+    WhatsApp/Facebook crawlers do not run JavaScript, so the tags must already
+    be in the delivered HTML. Routing and exam URLs are untouched - only the
+    <head> of the same SPA document is enriched.
+    """
+    index_html = og_meta.read_index(FRONTEND_DIST)  # type: ignore[arg-type]
+    url = og_meta.canonical_url(request, path)
+    og_type = "article" if path.startswith("/exam/") else "website"
+    html_doc = og_meta.render_index_with_meta(
+        index_html,
+        url=url,
+        image=og_meta.site_base_url(request) + og_meta.OG_IMAGE_PATH,
+        og_type=og_type,
+    )
+    return HTMLResponse(
+        content=html_doc,
+        headers={"Cache-Control": "public, max-age=0, must-revalidate"},
+    )
+
+
 @app.get("/")
-async def root():
+async def root(request: Request):
     if FRONTEND_DIST:
         # Serve the SPA at the root (Vercel FastAPI preset routes every request here).
-        return FileResponse(FRONTEND_DIST / "index.html")
+        return _spa_html_response(request, "/")
     return {
         "app": settings.PROJECT_NAME,
         "tagline": "امتحن، اعرف نتيجتك، وشوف ترتيبك",
@@ -341,7 +364,7 @@ async def health():
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
-async def spa_fallback(full_path: str):
+async def spa_fallback(full_path: str, request: Request):
     """
     SPA fallback: serve static assets from frontend/dist and return index.html
     for client-side routes (e.g. /admin, /admin/login, /exam/{slug}).
@@ -364,4 +387,4 @@ async def spa_fallback(full_path: str):
     ):
         return FileResponse(candidate)
 
-    return FileResponse(root_dir / "index.html")
+    return _spa_html_response(request, "/" + full_path.lstrip("/"))
