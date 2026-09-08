@@ -1,20 +1,23 @@
 /**
- * ExamWatermark
+ * ExamWatermark — student exam branding strip.
  *
- * Decorative background watermark for the student exam question area.
+ * Renders the exam branding "✦ مس ايه فايز ✦" as a prominent, centered,
+ * readable line of text inside the question card. It is rendered twice by
+ * the student exam page: once ABOVE the question and once BELOW the answers
+ * (no diagonal/background watermark — this is ordinary in-flow text).
  *
- * - Sits behind the question content (z-0) and is clipped by the question card.
- * - Never captures pointer/touch events (`pointer-events-none`) so answer
- *   options, navigation, feedback and the timer stay fully interactive.
- * - Not selectable and hidden from assistive technology (`aria-hidden`).
- * - Size is responsive and container based (cqw) with a viewport based
- *   fallback (vw) for older browsers, so it scales down on tablet/mobile
- *   and never widens or overflows the question card.
+ * - Uses the site typography (inherited Cairo) and brand colors
+ *   (indigo question accents + teal sparkles) at a readable ~70-80% alpha.
+ * - Large, official-exam-branding size: ~24px mobile / ~30px tablet / 36px
+ *   desktop — prominent yet secondary to the question and answers.
+ * - Normal document flow: never overlaps the question, answers, feedback,
+ *   timer or navigation, and never widens/overflows the card.
+ * - Non-interactive, not selectable, hidden from assistive technology.
  */
 interface ExamWatermarkProps {
-  /** Watermark text. */
+  /** Branding text. */
   text?: string
-  /** Extra classes for the absolutely positioned wrapper. */
+  /** Extra classes for spacing/placement (e.g. margins). */
   className?: string
 }
 
@@ -23,29 +26,12 @@ export default function ExamWatermark({
   className = '',
 }: ExamWatermarkProps) {
   return (
-    <div
+    <p
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center overflow-hidden ${className}`}
+      dir="rtl"
+      className={`select-none text-center text-[24px] sm:text-[30px] md:text-[36px] font-bold leading-snug text-indigo-600/70 ${className}`}
     >
-      <span
-        dir="rtl"
-        // Fallback for browsers without container query units.
-        className="whitespace-nowrap font-black leading-none text-indigo-700 text-[length:min(5.25rem,13.5vw)]"
-        style={{
-          // Scales with the question card; ignored (falls back to the vw
-          // value above) by browsers that do not support cqw. Sized so the
-          // rotated text spans ~87% of the card and never overflows it.
-          fontSize: 'min(5.25rem, 14.5cqw)',
-          // Subtle (~6%) and slightly diagonal.
-          opacity: 0.06,
-          transform: 'rotate(-15deg)',
-          letterSpacing: '0.02em',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        }}
-      >
-        {text}
-      </span>
-    </div>
+      <span className="text-[0.62em] text-teal-500/80">✦</span> <span className="mx-2 sm:mx-3">{text}</span> <span className="text-[0.62em] text-teal-500/80">✦</span>
+    </p>
   )
 }
