@@ -12,6 +12,7 @@ from app.db.session import get_db
 from app.schemas.result import AttemptResultOut, LeaderboardEntryOut, AdminDashboardStats, AttemptDetailOut, AttemptAnswerDetail
 from app.repositories.attempt_repository import AttemptRepository
 from app.services.ranking_service import RankingService
+from app.services.public_attempt_service import PublicAttemptService
 from app.models.exam import Exam, ExamStatus
 from app.models.student import Student
 from app.models.exam_attempt import ExamAttempt, AttemptStatus
@@ -35,6 +36,10 @@ async def list_results(
     db: AsyncSession = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
+    # Finalize abandoned attempts first, so the admin never sees a row stuck on
+    # IN_PROGRESS for a student who already left the exam page.
+    await PublicAttemptService(db).sweep_abandoned_attempts(exam_id)
+
     # Build query with pagination
     base_query = select(ExamAttempt).options(
         selectinload(ExamAttempt.student),
@@ -167,6 +172,7 @@ async def get_leaderboard(
     db: AsyncSession = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
+    await PublicAttemptService(db).sweep_abandoned_attempts(exam_id)
     service = RankingService(db)
     return await service.get_leaderboard(exam_id)
 

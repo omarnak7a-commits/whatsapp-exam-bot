@@ -4,15 +4,18 @@ from datetime import datetime
 from typing import Optional, Tuple, List, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from app.repositories.attempt_repository import AttemptRepository
 from app.repositories.exam_repository import ExamRepository
 from app.repositories.question_repository import QuestionRepository
+from app.services.public_attempt_service import ALREADY_ATTEMPTED_MESSAGE, normalize_student_name
 from app.services.timer_service import TimerService
 from app.services.ranking_service import RankingService
 from app.models.exam import Exam, ExamStatus
 from app.models.exam_attempt import ExamAttempt, AttemptStatus
 from app.models.attempt_answer import AttemptAnswer
+from app.models.student import Student
 from app.models.question import Question
 from app.models.option import Option
 from app.core.exceptions import (
@@ -40,18 +43,15 @@ class AttemptService:
                 detail="الامتحان غير منشور أو غير موجود حاليًا",
             )
 
-        # Check existing attempts
+        # One attempt per student per exam (platform-wide rule).
+        # ANY previous attempt - IN_PROGRESS, COMPLETED or EXPIRED - means the
+        # student already consumed their attempt: no resume, no new attempt.
         existing_attempt = await self.repo.get_any_attempt(student_id, exam_id)
         if existing_attempt:
-            if existing_attempt.status == AttemptStatus.IN_PROGRESS.value:
-                # Check if already expired
-                if TimerService.is_expired(existing_attempt.expires_at):
-                    await self.complete_attempt(existing_attempt.id, is_expired=True)
-                else:
-                    return existing_attempt
-            
-            if exam.one_attempt_only:
-                raise OneAttemptOnlyException("لقد أتممت هذا الامتحان بالفعل ولا يمكن إعادته")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=ALREADY_ATTEMPTED_MESSAGE,
+            )
 
         # Select & randomize questions
         all_questions = list(exam.questions)
@@ -78,9 +78,15 @@ class AttemptService:
         now = datetime.utcnow()
         expires_at = TimerService.calculate_expiration(now, exam.duration_seconds)
 
+        # Keep the normalized-name key in sync with the web flow so both paths
+        # share the same "one attempt per student per exam" DB constraint.
+        student = await self.db.get(Student, student_id)
+        name_key = normalize_student_name(student.name) if student and student.name else None
+
         attempt = ExamAttempt(
             exam_id=exam_id,
             student_id=student_id,
+            student_name_key=name_key,
             started_at=now,
             expires_at=expires_at,
             status=AttemptStatus.IN_PROGRESS.value,
@@ -88,7 +94,17 @@ class AttemptService:
             question_order_json=json.dumps(question_ids),
             option_order_json=json.dumps(option_order_map),
         )
-        return await self.repo.create(attempt)
+        try:
+            async with self.db.begin_nested():
+                return await self.repo.create(attempt)
+        except IntegrityError:
+            # Race condition: a concurrent request already created the single
+            # allowed attempt and the DB unique constraint rejected this one.
+            self.db.expunge(attempt)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=ALREADY_ATTEMPTED_MESSAGE,
+            )
 
     async def get_current_question(
         self, attempt_id: int

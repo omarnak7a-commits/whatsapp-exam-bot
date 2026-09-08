@@ -1,8 +1,9 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
@@ -18,6 +19,27 @@ from app.services.ranking_service import RankingService
 
 def _utcnow():
     return datetime.now(timezone.utc)
+
+
+# Single source of truth for the "one attempt per student per exam" rejection.
+ALREADY_ATTEMPTED_MESSAGE = (
+    "لقد دخلت هذا الامتحان من قبل، وتم تسجيل محاولتك. لا يُسمح بإعادة الامتحان."
+)
+
+
+def normalize_student_name(name: str) -> str:
+    """Normalize a student name for identity purposes: trimmed + lowercased."""
+    return " ".join(name.split()).lower()
+
+
+# A student is considered gone from the exam page when no heartbeat arrived
+# within this window. The exam page pings well below it, so a live page is
+# never swept, while a closed tab / dead browser is auto-submitted.
+HEARTBEAT_GRACE_SECONDS = 45
+
+
+def _already_attempted() -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ALREADY_ATTEMPTED_MESSAGE)
 
 
 class PublicAttemptService:
@@ -46,10 +68,14 @@ class PublicAttemptService:
         if len(name) > 100:
             raise HTTPException(status_code=400, detail="الاسم طويل جداً")
 
-        # Try to find existing student with same normalized name (case-insensitive)
-        # For simplicity, we look for exact match trimmed lower
+        # Find an existing student with the same normalized name (trimmed +
+        # case-insensitive), so "Omar" and "omar" are the SAME student and
+        # therefore share the single allowed attempt per exam.
+        # The oldest record wins: it is the one that owns any earlier attempt.
         result = await self.db.execute(
-            select(Student).where(Student.name == name).order_by(Student.created_at.desc())
+            select(Student)
+            .where(func.lower(func.trim(Student.name)) == name.lower())
+            .order_by(Student.created_at.asc(), Student.id.asc())
         )
         existing = result.scalars().first()
         if existing:
@@ -69,26 +95,28 @@ class PublicAttemptService:
         if not exam.questions or len(exam.questions) == 0:
             raise HTTPException(status_code=400, detail="الامتحان لا يحتوي على أسئلة")
 
+        # Finalize any attempt on this exam whose page stopped reporting, so a
+        # student who closed the tab is scored and ranked before we answer.
+        await self.sweep_abandoned_attempts(exam.id)
+
         student = await self.get_or_create_student(student_name)
 
-        # Check if student has an in-progress attempt for this exam - resume it
-        existing_query = select(ExamAttempt).where(
-            and_(
-                ExamAttempt.exam_id == exam.id,
-                ExamAttempt.student_id == student.id,
-                ExamAttempt.status == AttemptStatus.IN_PROGRESS.value,
-            )
-        ).order_by(ExamAttempt.started_at.desc())
-        result = await self.db.execute(existing_query)
-        existing_attempt = result.scalars().first()
-
-        if existing_attempt:
-            # Check if expired
-            if TimerService.is_expired(existing_attempt.expires_at):
-                await self._expire_attempt(existing_attempt)
-                # Continue to create new attempt
-            else:
-                return existing_attempt, exam, student
+        # ------------------------------------------------------------------
+        # One attempt per student per exam.
+        #
+        # ANY previous attempt for this (exam, student-name) pair - whatever
+        # its status (IN_PROGRESS / COMPLETED / EXPIRED / CANCELLED) - means
+        # the student has already consumed their single attempt. We neither
+        # resume nor create a new one: the request is rejected with 409.
+        #
+        # The lookup matches on the NORMALIZED student name (trimmed +
+        # case-insensitive) rather than on student.id alone, so legacy rows
+        # such as "Omar" and "omar" stored as two separate students still
+        # count as the same person.
+        # ------------------------------------------------------------------
+        name_key = normalize_student_name(student_name)
+        if await self._has_previous_attempt(exam.id, name_key):
+            raise _already_attempted()
 
         now = _utcnow()
         duration_seconds = exam.duration_seconds or (exam.duration_minutes * 60)
@@ -110,6 +138,7 @@ class PublicAttemptService:
         attempt = ExamAttempt(
             exam_id=exam.id,
             student_id=student.id,
+            student_name_key=name_key,
             started_at=now,
             expires_at=expires_at,
             status=AttemptStatus.IN_PROGRESS.value,
@@ -123,11 +152,60 @@ class PublicAttemptService:
             completion_time_seconds=0,
             question_order_json=json.dumps(question_ids),
             option_order_json=json.dumps(option_order_map),
+            load_count=0,
+            last_seen_at=now,
         )
         self.db.add(attempt)
-        await self.db.flush()
-        await self.db.refresh(attempt)
+        try:
+            # Flush inside a SAVEPOINT so that a unique-constraint violation
+            # raised by a concurrent duplicate request (race condition) can be
+            # rolled back without poisoning the outer transaction.
+            async with self.db.begin_nested():
+                await self.db.flush()
+        except IntegrityError:
+            # The database itself refused the duplicate attempt
+            # (uq_exam_attempts_exam_name / _exam_student). This is the race
+            # condition path: the concurrent winner already created THE attempt,
+            # so this request gets exactly the same 409 as the pre-check.
+            self._discard(attempt)
+            raise _already_attempted()
+
+        # No refresh() here: flush() already populated the primary key and every
+        # other value was set explicitly above. Refreshing would issue an extra
+        # SELECT that can fail when a concurrent request rolled back a savepoint
+        # on the same connection.
         return attempt, exam, student
+
+    def _discard(self, instance) -> None:
+        """Best-effort detach of a rejected instance from the session."""
+        try:
+            self.db.expunge(instance)
+        except Exception:  # noqa: BLE001
+            pass
+
+    async def _has_previous_attempt(self, exam_id: int, name_key: str) -> bool:
+        """True when this exam already has an attempt by this student name.
+
+        Matching is done on the normalized name (trimmed, case-insensitive) and
+        deliberately ignores the attempt status: IN_PROGRESS, COMPLETED and
+        EXPIRED all count as a consumed attempt.
+        """
+        query = (
+            select(ExamAttempt.id)
+            .outerjoin(Student, Student.id == ExamAttempt.student_id)
+            .where(
+                and_(
+                    ExamAttempt.exam_id == exam_id,
+                    # Match either the stored normalized key (new rows) or the
+                    # student's name (legacy rows created before the key column).
+                    (ExamAttempt.student_name_key == name_key)
+                    | (func.lower(func.trim(Student.name)) == name_key),
+                )
+            )
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().first() is not None
 
     async def get_attempt(self, attempt_id: int) -> ExamAttempt:
         query = (
@@ -294,6 +372,88 @@ class PublicAttemptService:
 
         return attempt
 
+    # ------------------------------------------------------------------
+    # Auto submit on exit
+    # ------------------------------------------------------------------
+
+    async def auto_submit(self, attempt_id: int) -> ExamAttempt:
+        """Finalize an attempt the student left before pressing Submit.
+
+        Scoring is identical to a normal submit (same `submit_attempt` path),
+        so score / percentage / correct / wrong / completion_time_seconds /
+        submitted_at / finished_at are all filled in the same way. Idempotent:
+        an already finished attempt is returned untouched.
+        """
+        attempt = await self.get_attempt(attempt_id)
+        if attempt.status != AttemptStatus.IN_PROGRESS.value:
+            return attempt
+        return await self.submit_attempt(attempt_id)
+
+    async def register_page_load(self, attempt: ExamAttempt) -> ExamAttempt:
+        """Record that the exam page loaded this attempt.
+
+        The exam page is served exactly ONCE per attempt. The first load is the
+        student sitting the exam; any later load means they had left the page
+        (refresh, Back then forward, re-opening the link) and the attempt is
+        auto-submitted. This is the server-side guarantee that does not depend
+        on any browser event firing.
+        """
+        if attempt.status != AttemptStatus.IN_PROGRESS.value:
+            return attempt
+
+        if (attempt.load_count or 0) >= 1:
+            # Second delivery of the exam page: treat as leaving the exam.
+            return await self.submit_attempt(attempt.id)
+
+        attempt.load_count = (attempt.load_count or 0) + 1
+        attempt.last_seen_at = _utcnow()
+        await self.db.flush()
+        return attempt
+
+    async def heartbeat(self, attempt_id: int) -> ExamAttempt:
+        """Mark the attempt as still being taken (page is open)."""
+        attempt = await self.get_attempt(attempt_id)
+        if attempt.status == AttemptStatus.IN_PROGRESS.value:
+            if TimerService.is_expired(attempt.expires_at):
+                return await self._expire_attempt(attempt)
+            attempt.last_seen_at = _utcnow()
+            await self.db.flush()
+        return attempt
+
+    async def sweep_abandoned_attempts(self, exam_id: Optional[int] = None) -> int:
+        """Auto-submit IN_PROGRESS attempts whose page stopped reporting.
+
+        This is the backstop for the cases no browser event can cover reliably
+        (killed tab, crashed browser, lost connectivity, phone locked). It runs
+        lazily from public endpoints, so no scheduler is required.
+        """
+        now = _utcnow()
+        cutoff = now - timedelta(seconds=HEARTBEAT_GRACE_SECONDS)
+
+        query = select(ExamAttempt).where(
+            ExamAttempt.status == AttemptStatus.IN_PROGRESS.value
+        )
+        if exam_id is not None:
+            query = query.where(ExamAttempt.exam_id == exam_id)
+
+        result = await self.db.execute(query)
+        candidates = list(result.scalars().all())
+
+        swept = 0
+        for attempt in candidates:
+            last_seen = attempt.last_seen_at or attempt.started_at
+            if last_seen is not None and last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=timezone.utc)
+            # Expired attempts are handled by the timer rules, not by this sweep.
+            if TimerService.is_expired(attempt.expires_at, now):
+                await self._expire_attempt(attempt)
+                swept += 1
+                continue
+            if last_seen is not None and last_seen < cutoff:
+                await self.submit_attempt(attempt.id)
+                swept += 1
+        return swept
+
     async def get_attempt_result(self, attempt_id: int) -> dict:
         attempt = await self.get_attempt(attempt_id)
 
@@ -367,5 +527,7 @@ class PublicAttemptService:
 
     async def get_public_leaderboard(self, slug: str) -> List[dict]:
         exam = await self.get_public_exam(slug)
+        # Make sure abandoned attempts are scored before the board is read.
+        await self.sweep_abandoned_attempts(exam.id)
         leaderboard = await self.ranking_service.get_leaderboard(exam.id)
         return leaderboard

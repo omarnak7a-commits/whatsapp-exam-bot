@@ -76,6 +76,11 @@ SCHEMA_FIXES: dict[str, list[tuple[str, str, str | None]]] = {
         # that is missing them fails attempt creation with UndefinedColumn.
         ("question_order_json", "TEXT", None),
         ("option_order_json", "TEXT", None),
+        # Normalized student name enforcing one attempt per student per exam.
+        ("student_name_key", "VARCHAR(255)", None),
+        # Auto-submit-on-exit tracking (exam page delivery + heartbeat).
+        ("load_count", "INTEGER", "0"),
+        ("last_seen_at", "TIMESTAMPTZ", None),
     ],
     "attempt_answers": [
         ("option_id", "INTEGER", None),
@@ -175,9 +180,51 @@ async def _apply_schema_fixes(conn) -> None:
                     )
 
 
+async def _ensure_one_attempt_constraint(conn) -> None:
+    """Enforce one attempt per student per exam at the database level.
+
+    `create_all` only applies the UniqueConstraint to tables it CREATES, so an
+    already-existing `exam_attempts` table (every deployed environment) would
+    stay unprotected against the race-condition path. A partial unique INDEX is
+    used here because it works identically on SQLite and PostgreSQL and raises
+    the same IntegrityError the service layer converts into a 409.
+
+    Pre-existing duplicates would make the index creation fail; that failure is
+    caught and logged, leaving the application-level check as the guard (the
+    Alembic migration 004 de-duplicates properly).
+    """
+    statements = [
+        (
+            "uq_exam_attempts_exam_student",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_exam_attempts_exam_student "
+            "ON exam_attempts (exam_id, student_id)",
+        ),
+        (
+            "uq_exam_attempts_exam_name",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_exam_attempts_exam_name "
+            "ON exam_attempts (exam_id, student_name_key)",
+        ),
+    ]
+    for index_name, stmt in statements:
+        await conn.execute(text("SAVEPOINT one_attempt_idx"))
+        try:
+            await conn.execute(text(stmt))
+            await conn.execute(text("RELEASE SAVEPOINT one_attempt_idx"))
+            logger.info("One-attempt unique index ensured: %s", index_name)
+        except Exception as e:  # noqa: BLE001
+            await conn.execute(text("ROLLBACK TO SAVEPOINT one_attempt_idx"))
+            await conn.execute(text("RELEASE SAVEPOINT one_attempt_idx"))
+            logger.warning(
+                "Unique index %s not applied (duplicates may exist): %s",
+                index_name,
+                e,
+            )
+
+
 async def _ensure_schema_on_conn(conn) -> None:
     await conn.run_sync(Base.metadata.create_all)
     await _apply_schema_fixes(conn)
+    await _ensure_one_attempt_constraint(conn)
 
 
 # ---------------------------------------------------------------------------
