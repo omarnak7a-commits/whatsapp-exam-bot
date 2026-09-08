@@ -93,6 +93,17 @@ export interface AdminAttemptDetail {
 }
 
 /** Public (student-side) shapes — options never carry correctness. */
+/** One row of an exam-specific admin leaderboard. */
+export interface AdminLeaderboardEntry {
+  rank: number
+  studentId: string
+  studentName: string
+  score: number
+  totalScore: number
+  percentage: number
+  completionTimeSeconds: number
+}
+
 export interface PublicExamInfo {
   slug: string
   title: string
@@ -222,10 +233,13 @@ interface DataContextValue {
   // Admin results
   fetchAttemptDetail: (attemptId: string) => Promise<AdminAttemptDetail>
   refreshAttempts: () => Promise<void>
+  fetchExamLeaderboard: (examId: string) => Promise<AdminLeaderboardEntry[]>
 
   // Student flow (public API)
   fetchPublicExam: (slug: string) => Promise<PublicExamInfo>
   startAttempt: (slug: string, studentName: string) => Promise<{ attemptId: string }>
+  autoSubmitAttempt: (attemptId: string) => Promise<void>
+  sendHeartbeat: (attemptId: string) => Promise<void>
   fetchAttemptBundle: (attemptId: string) => Promise<PublicAttemptBundle>
   submitAnswer: (attemptId: string, questionId: string, optionId: string) => Promise<PublicAnswerResult>
   completeAttempt: (attemptId: string) => Promise<void>
@@ -707,6 +721,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     await publicFetch(`/public/attempts/${attemptId}/complete`, { method: 'POST' })
   }, [])
 
+  // Auto submit when the student leaves the exam page before pressing Submit.
+  // `keepalive` lets the request outlive the page during an unload; sendBeacon
+  // is the fallback for browsers that drop keepalive fetches on tab close.
+  // The backend is idempotent, so a duplicated delivery is harmless.
+  const autoSubmitAttempt = useCallback((attemptId: string) => {
+    const url = `/api/public/attempts/${attemptId}/auto-submit`
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+        const blob = new Blob(['{}'], { type: 'application/json' })
+        if (navigator.sendBeacon(url, blob)) return Promise.resolve()
+      }
+    } catch {
+      // fall through to fetch
+    }
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      keepalive: true,
+    }).then(() => undefined).catch(() => undefined)
+  }, [])
+
+  // Tells the server the exam page is still open. When these stop arriving the
+  // server auto-submits the attempt (closed tab / dead browser backstop).
+  const sendHeartbeat = useCallback(async (attemptId: string) => {
+    try {
+      await publicFetch<{ status: string }>(`/public/attempts/${attemptId}/heartbeat`, {
+        method: 'POST',
+      })
+    } catch {
+      // A failed heartbeat must never interrupt the exam.
+    }
+  }, [])
+
   const fetchPublicResult = useCallback(async (attemptId: string): Promise<PublicResult> => {
     const r = await publicFetch<{
       attempt_id: number
@@ -760,6 +808,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Admin leaderboard for ONE exam. The server ranks and filters by exam_id,
+  // so results from other exams can never appear here.
+  const fetchExamLeaderboard = useCallback(
+    async (examId: string): Promise<AdminLeaderboardEntry[]> => {
+      const list = await apiFetch<
+        Array<{
+          rank: number
+          student_id: number
+          student_name: string
+          score: number
+          total_score: number
+          percentage: number
+          completion_time_seconds: number
+        }>
+      >(`/exams/${examId}/leaderboard`)
+      return list.map(e => ({
+        rank: e.rank,
+        studentId: String(e.student_id),
+        studentName: e.student_name,
+        score: e.score,
+        totalScore: e.total_score,
+        percentage: e.percentage,
+        completionTimeSeconds: e.completion_time_seconds,
+      }))
+    },
+    []
+  )
+
   const fetchPublicLeaderboard = useCallback(async (slug: string): Promise<PublicResult['leaderboard']> => {
     const list = await publicFetch<
       Array<{
@@ -806,8 +882,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getQuestionsForExam,
         fetchAttemptDetail,
         refreshAttempts,
+        fetchExamLeaderboard,
         fetchPublicExam,
         startAttempt,
+        autoSubmitAttempt,
+        sendHeartbeat,
         fetchAttemptBundle,
         submitAnswer,
         completeAttempt,

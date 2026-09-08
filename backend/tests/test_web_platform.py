@@ -224,10 +224,10 @@ async def test_duplicate_student_handling(client: AsyncClient, admin_auth_token:
     await client.post(f"/api/exams/{exam_id}/publish", headers=headers)
     slug = (await client.get(f"/api/exams/{exam_id}", headers=headers)).json()["public_slug"]
 
-    # Same name twice should reuse student record but create new attempt if previous completed
+    # Same name twice reuses the student record, and the SECOND start is refused:
+    # one attempt per student per exam.
     res1 = await client.post(f"/api/public/exams/{slug}/attempts", json={"student_name": "محمد"})
     attempt1_id = res1.json()["id"]
-    student1_id = res1.json()["student_id"]
 
     # Get questions and submit first attempt
     res_get1 = await client.get(f"/api/public/attempts/{attempt1_id}")
@@ -238,11 +238,10 @@ async def test_duplicate_student_handling(client: AsyncClient, admin_auth_token:
     await client.post(f"/api/public/attempts/{attempt1_id}/answers", json={"question_id": q_id, "option_id": correct_opt["id"]})
     await client.post(f"/api/public/attempts/{attempt1_id}/submit")
 
-    # Second attempt with same name should find same student
+    # Second start with the same name is rejected with 409 Conflict.
     res2 = await client.post(f"/api/public/exams/{slug}/attempts", json={"student_name": "محمد"})
-    # Should create new attempt with same student_id (since we reuse student)
-    assert res2.status_code == 200
-    assert res2.json()["student_id"] == student1_id
+    assert res2.status_code == 409
+    assert "لا يُسمح بإعادة الامتحان" in res2.json()["detail"]
 
 
 @pytest.mark.asyncio

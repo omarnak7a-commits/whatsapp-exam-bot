@@ -75,6 +75,12 @@ async def get_attempt(attempt_id: int, db: AsyncSession = Depends(get_db)):
     if attempt.status == "IN_PROGRESS" and TimerService.is_expired(attempt.expires_at):
         attempt = await service._expire_attempt(attempt)
 
+    # The exam page is delivered ONCE per attempt. A second delivery means the
+    # student had left the page (refresh / Back / re-opening the link), so the
+    # attempt is auto-submitted here instead of being resumed. The client is
+    # then redirected to the result by the returned non-IN_PROGRESS status.
+    attempt = await service.register_page_load(attempt)
+
     remaining = TimerService.calculate_remaining_seconds(attempt.expires_at) if attempt.status == "IN_PROGRESS" else 0
 
     # Build questions for frontend (without correct answers)
@@ -207,6 +213,44 @@ async def submit_attempt(attempt_id: int, db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.post("/attempts/{attempt_id}/auto-submit")
+async def auto_submit_attempt(attempt_id: int, db: AsyncSession = Depends(get_db)):
+    """Auto submit an attempt the student left before pressing Submit.
+
+    Called by the exam page on exit (pagehide / beforeunload / Back), usually
+    via sendBeacon or fetch(keepalive). It is idempotent and deliberately
+    tolerant: an already finished attempt returns its existing state instead of
+    an error, because beacons can be delivered more than once.
+    """
+    service = PublicAttemptService(db)
+    attempt = await service.auto_submit(attempt_id)
+    return {
+        "id": attempt.id,
+        "status": attempt.status,
+        "score": attempt.score,
+        "total_score": attempt.total_score,
+        "percentage": attempt.percentage,
+    }
+
+
+@router.post("/attempts/{attempt_id}/heartbeat")
+async def attempt_heartbeat(attempt_id: int, db: AsyncSession = Depends(get_db)):
+    """Report that the exam page is still open.
+
+    When heartbeats stop arriving the attempt is auto-submitted by the
+    server-side sweep - the backstop for closed tabs and dead browsers, where
+    no unload event can be trusted to reach us.
+    """
+    service = PublicAttemptService(db)
+    attempt = await service.heartbeat(attempt_id)
+    remaining = (
+        TimerService.calculate_remaining_seconds(attempt.expires_at)
+        if attempt.status == "IN_PROGRESS"
+        else 0
+    )
+    return {"id": attempt.id, "status": attempt.status, "remaining_seconds": remaining}
+
+
 @router.get("/attempts/{attempt_id}/result")
 async def get_result(attempt_id: int, db: AsyncSession = Depends(get_db)):
     service = PublicAttemptService(db)
@@ -265,6 +309,8 @@ async def get_leaderboard(slug: str, db: AsyncSession = Depends(get_db)):
     exam = await service.get_public_exam(slug)
     if not bool(exam.leaderboard_enabled):
         raise HTTPException(status_code=403, detail="لوحة الترتيب غير مفعلة لهذا الامتحان")
+    # Finalize abandoned attempts so the board reflects students who left.
+    await service.sweep_abandoned_attempts(exam.id)
     leaderboard = await service.ranking_service.get_leaderboard(exam.id)
 
     return [

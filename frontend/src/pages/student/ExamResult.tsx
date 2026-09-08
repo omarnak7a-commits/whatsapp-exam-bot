@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useData, PublicResult } from '@/contexts/DataContext'
-import { useNavigate, useParams } from '@/router'
+import { useParams } from '@/router'
 import Logo from '@/components/Logo'
 
 function fmtTime(secs: number) {
@@ -13,10 +13,8 @@ const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function ExamResult() {
   const { fetchPublicResult } = useData()
-  const navigate = useNavigate()
   const params = useParams()
   const attemptId = params.attemptId || ''
-  const slug = params.slug || ''
 
   const [result, setResult] = useState<PublicResult | null>(null)
   const [error, setError] = useState('')
@@ -145,12 +143,10 @@ export default function ExamResult() {
           </div>
         )}
 
-        <button
-          onClick={() => navigate(`/exam/${slug || result.slug}`)}
-          className="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-2xl text-sm hover:bg-gray-200"
-        >
-          إعادة الامتحان
-        </button>
+        {/* One attempt per student: no retake path is offered after the result. */}
+        <div className="w-full py-3 px-4 bg-gray-100 text-gray-600 font-bold rounded-2xl text-sm text-center">
+          تم تسجيل محاولتك بنجاح، ولا يُسمح بإعادة هذا الامتحان.
+        </div>
       </div>
     </div>
   )
